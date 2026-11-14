@@ -5,6 +5,11 @@ services:
     buildCommand: echo "static site, no build"
     staticPublishPath: .
     pullRequestPreviewsEnabled: false
+    routes:
+      # прокси к Supabase через свой домен (работает, даже если *.supabase.co недоступен у провайдера)
+      - type: rewrite
+        source: /sb/*
+        destination: https://pzdraaxgzphxennadrlu.supabase.co/*
     headers:
       - path: /sw.js
         name: Cache-Control

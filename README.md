@@ -38,8 +38,13 @@ SQL лежит в `supabase.sql`.
 | `supabase.sql` | схема и функции базы |
 
 ## Деплой на Render
-New → **Static Site** → репозиторий → Build Command: оставить пустым или `echo ok`,
-Publish Directory: `.` (или Blueprint из `render.yaml`).
+New → **Static Site** → репозиторий → Build Command: `echo static`, Publish Directory: `.`
+(или Blueprint из `render.yaml`).
+
+Обязательно добавь правило в **Redirects/Rewrites**:
+`/sb/*` → `https://pzdraaxgzphxennadrlu.supabase.co/*` (действие **Rewrite**).
+Приложение ходит в Supabase через свой домен, поэтому работает, даже если провайдер
+не пропускает `*.supabase.co`. Если прокси недоступен, запросы идут в Supabase напрямую.
 
 ## Время пар
 1 — 8:00–9:20 · 2 — 9:30–10:50 · 3 — 11:20–12:40 · 4 — 12:50–14:10 · 5 — 14:20–15:40 · 6 — 15:50–17:10

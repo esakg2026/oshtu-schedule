@@ -45,24 +45,54 @@
   };
 
   // ---------- Supabase RPC ----------
-  async function rpc(name, body = {}, timeout = 15000) {
-    const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG;
+  // Сначала через прокси на своём домене (/sb → Supabase, правило Rewrite в Render):
+  // так работает, даже если провайдер не пропускает *.supabase.co. При сетевой ошибке — напрямую.
+  function apiBases() {
+    const { SUPABASE_URL } = window.APP_CONFIG;
+    const local = !/^https?:$/.test(location.protocol) || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    const bases = local ? [SUPABASE_URL] : [`${location.origin}/sb`, SUPABASE_URL];
+    const pref = rpc.preferred;
+    return pref && bases.includes(pref) ? [pref, ...bases.filter((b) => b !== pref)] : bases;
+  }
+
+  class HttpError extends Error {}
+
+  async function rpcVia(base, name, body, timeout) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeout);
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      const r = await fetch(`${base}/rest/v1/rpc/${name}`, {
         method: "POST",
-        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+        headers: { apikey: window.APP_CONFIG.SUPABASE_KEY, "Content-Type": "application/json" },
         body: JSON.stringify(body),
         signal: ctrl.signal,
         cache: "no-store",
       });
       const data = await r.json().catch(() => null);
-      if (!r.ok) throw new Error((data && (data.message || data.error)) || `HTTP ${r.status}`);
+      if (!r.ok) {
+        // 5xx от прокси — пробуем другой путь; 4xx — ошибка запроса, повторять бессмысленно
+        if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
+        throw new HttpError((data && (data.message || data.error)) || `HTTP ${r.status}`);
+      }
       return data;
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async function rpc(name, body = {}, timeout = 12000) {
+    let lastErr;
+    for (const base of apiBases()) {
+      try {
+        const data = await rpcVia(base, name, body, timeout);
+        rpc.preferred = base;
+        return data;
+      } catch (e) {
+        if (e instanceof HttpError) throw e;
+        lastErr = e;
+      }
+    }
+    throw lastErr;
   }
 
   // ---------- разбор HTML ячейки ----------
