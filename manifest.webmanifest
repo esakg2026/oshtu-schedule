@@ -1,0 +1,25 @@
+{
+  "name": "Расписание ОшТУ",
+  "short_name": "Расписание",
+  "description": "Расписание занятий ОшТУ: сегодня, завтра и неделя. Работает без интернета.",
+  "id": "./",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "ru",
+  "background_color": "#f4f5fb",
+  "theme_color": "#5b5bf6",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Сегодня", "short_name": "Сегодня", "url": "./?d=today", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Завтра", "short_name": "Завтра", "url": "./?d=tomorrow", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Неделя", "short_name": "Неделя", "url": "./?view=week", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}

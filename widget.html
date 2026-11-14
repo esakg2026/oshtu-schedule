@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Пары сегодня</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #ffffff; --text: #121527; --muted: #6b7088; --line: #e3e5f0; --soft: #eef0f8;
+      --accent: #5b5bf6; --accent-2: #8b5cf6;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --bg: #161927; --text: #eef0fa; --muted: #8d92ab; --line: #262a3d; --soft: #1e2233; --accent: #7c7cff; --accent-2: #a78bfa; color-scheme: dark; }
+    }
+    :root[data-theme="dark"] { --bg: #161927; --text: #eef0fa; --muted: #8d92ab; --line: #262a3d; --soft: #1e2233; --accent: #7c7cff; --accent-2: #a78bfa; color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 14px; line-height: 1.3; -webkit-font-smoothing: antialiased;
+    }
+    a.w { display: flex; flex-direction: column; height: 100%; padding: 12px 14px; color: inherit; text-decoration: none; }
+    .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+    .head b { font-size: 16px; letter-spacing: -0.01em; }
+    .head span { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .row { display: grid; grid-template-columns: 22px 40px 1fr auto; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }
+    .row:first-of-type { border-top: 0; }
+    .row .n { font-weight: 800; color: var(--accent); }
+    .row .t { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .row .s { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row .r { color: var(--muted); font-size: 12px; }
+    .row.now { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border-radius: 10px; padding: 6px 8px; margin: 2px -8px; border-top-color: transparent; }
+    .row.now .n, .row.now .t, .row.now .r { color: rgba(255,255,255,.9); }
+    .row.past { opacity: .45; }
+    .row.now + .row { border-top-color: transparent; }
+    .msg { color: var(--muted); padding: 10px 0; }
+    .foot { margin-top: auto; padding-top: 6px; color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <a class="w" href="./" target="_top" id="w">
+    <div class="head"><b id="title">Сегодня</b><span id="sub"></span></div>
+    <div id="list"><div class="msg">Загрузка…</div></div>
+    <div class="foot"><span id="group"></span><span id="upd"></span></div>
+  </a>
+  <script src="config.js"></script>
+  <script src="core.js"></script>
+  <script>
+    (function () {
+      const C = window.Core;
+      const p = new URLSearchParams(location.search);
+      const saved = C.store.get("oshtu.settings", {}) || {};
+      const group = Number(p.get("g")) || saved.groupId;
+      const name = p.get("n") || saved.groupName || "";
+      const semParam = p.get("s") || (saved.semester && saved.semester !== "auto" ? saved.semester : null);
+      const semester = semParam ? Number(semParam) : C.autoSemester();
+      const flip = p.has("f") ? p.get("f") === "1" : !!saved.weekFlip;
+      if (p.get("theme")) document.documentElement.dataset.theme = p.get("theme");
+      const key = `oshtu.sched.${group}.${semester}`;
+      const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      let data = C.store.get(key);
+
+      function pickDay() {
+        let d = C.startOfDay(new Date());
+        if (C.weekdayIndex(d) === 7) return { d: C.addDays(d, 1), label: "Завтра" };
+        if (data) {
+          const st = C.dayStatus(C.dayLessons(C.parseSchedule(data.raw), d, flip));
+          if (st.state === "after" || (st.state === "none" && new Date().getHours() >= 17)) {
+            d = C.addDays(d, 1);
+            if (C.weekdayIndex(d) === 7) d = C.addDays(d, 1);
+            const diff = Math.round((d - C.startOfDay(new Date())) / 864e5);
+            return { d, label: diff === 1 ? "Завтра" : "Понедельник" };
+          }
+        }
+        return { d, label: "Сегодня" };
+      }
+
+      function render() {
+        document.getElementById("group").textContent = name;
+        if (!group) {
+          document.getElementById("list").innerHTML = '<div class="msg">Открой приложение и выбери группу</div>';
+          return;
+        }
+        if (!data) return;
+        const { d, label } = pickDay();
+        const list = C.dayLessons(C.parseSchedule(data.raw), d, flip);
+        const wt = C.weekType(d, flip) === "top" ? "верхняя" : "нижняя";
+        document.getElementById("title").textContent = label;
+        document.getElementById("sub").textContent =
+          d.toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" }) + " · " + wt;
+        const isToday = C.sameDay(d, new Date());
+        const t = C.nowMin();
+        document.getElementById("list").innerHTML = list.length
+          ? list.map((pr) => {
+              let cls = "row";
+              if (isToday && pr.start) {
+                if (t >= C.toMin(pr.end)) cls += " past";
+                else if (t >= C.toMin(pr.start)) cls += " now";
+              }
+              const l = pr.lessons[0];
+              const extra = pr.lessons.length > 1 ? ` +${pr.lessons.length - 1}` : "";
+              const ty = l.type ? ` (${l.type}.)` : "";
+              return `<div class="${cls}"><span class="n">${pr.n}</span><span class="t">${pr.start || ""}</span><span class="s">${esc(l.subject + ty + extra)}</span><span class="r">${esc(l.room)}</span></div>`;
+            }).join("")
+          : '<div class="msg">Пар нет 🎉</div>';
+        const upd = data.checked_at ? new Date(data.checked_at) : null;
+        document.getElementById("upd").textContent = upd
+          ? "обновлено " + upd.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+          : "";
+      }
+
+      async function refresh() {
+        if (!group) return render();
+        try {
+          const r = await C.rpc("oshtu_schedule", { p_group: group, p_semester: semester, p_name: name || null, p_max_age_sec: 300 });
+          data = { ...r, savedAt: Date.now() };
+          C.store.set(key, data);
+        } catch (e) {
+          if (!data) document.getElementById("list").innerHTML = '<div class="msg">Нет связи. Данные появятся при подключении.</div>';
+        }
+        render();
+      }
+
+      render();
+      refresh();
+      setInterval(render, 30e3);
+      setInterval(refresh, 5 * 60e3);
+      document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && refresh());
+    })();
+  </script>
+</body>
+</html>

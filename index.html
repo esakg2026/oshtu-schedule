@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Расписание ОшТУ</title>
+  <meta name="description" content="Расписание занятий ОшТУ: сегодня, завтра, неделя. Работает офлайн." />
+  <meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0d0f17" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Расписание" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    // тема до отрисовки, чтобы не было вспышки
+    try {
+      var t = JSON.parse(localStorage.getItem("oshtu.settings") || "{}").theme;
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <!-- ===== Первый запуск: выбор группы ===== -->
+  <section id="setup" class="setup" hidden>
+    <div class="setup-card">
+      <img src="icon.svg" alt="" class="setup-logo" width="64" height="64" />
+      <h1>Расписание ОшТУ</h1>
+      <p class="muted">Выбери свою группу один раз — дальше приложение само будет показывать пары на сегодня.</p>
+
+      <label class="field">
+        <span>Семестр</span>
+        <select id="fSemester"></select>
+      </label>
+      <label class="field">
+        <span>Факультет / Институт</span>
+        <select id="fFaculty"><option value="">Загрузка…</option></select>
+      </label>
+      <label class="field">
+        <span>Курс</span>
+        <select id="fCourse">
+          <option value="">Выбери курс</option>
+          <option value="1">1 курс</option>
+          <option value="2">2 курс</option>
+          <option value="3">3 курс</option>
+          <option value="4">4 курс</option>
+          <option value="5">5 курс</option>
+          <option value="6">6 курс</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Группа</span>
+        <select id="fGroup" disabled><option value="">Сначала факультет и курс</option></select>
+      </label>
+
+      <p id="setupError" class="error" hidden></p>
+      <button id="setupSave" class="btn btn-primary btn-block" disabled>Готово</button>
+      <button id="setupCancel" class="btn btn-ghost btn-block" hidden>Отмена</button>
+    </div>
+  </section>
+
+  <!-- ===== Основной экран ===== -->
+  <section id="main" class="main" hidden>
+    <header class="topbar">
+      <button id="groupBtn" class="chip" aria-label="Сменить группу">
+        <span id="groupName">—</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="topbar-right">
+        <button id="syncBtn" class="sync" aria-label="Обновить">
+          <span id="syncDot" class="dot"></span>
+          <span id="syncText">…</span>
+        </button>
+        <button id="settingsBtn" class="icon-btn" aria-label="Настройки">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div id="installBanner" class="install-banner" hidden>
+      <div>
+        <strong>Установи приложение</strong>
+        <span>Иконка на экране и работа без интернета</span>
+      </div>
+      <button id="installBtn" class="btn btn-primary btn-sm">Установить</button>
+      <button id="installClose" class="icon-btn" aria-label="Скрыть">✕</button>
+    </div>
+
+    <div class="hero">
+      <div class="hero-top">
+        <span id="dayLabel" class="hero-label">Сегодня</span>
+        <span id="weekBadge" class="badge">—</span>
+      </div>
+      <h1 id="dayTitle">—</h1>
+      <div id="nowCard" class="now-card" hidden>
+        <div class="now-row">
+          <span id="nowTitle" class="now-title"></span>
+          <span id="nowTime" class="now-time"></span>
+        </div>
+        <div id="nowSub" class="now-sub"></div>
+        <div id="nowBar" class="progress" hidden><i></i></div>
+      </div>
+    </div>
+
+    <nav id="weekStrip" class="week-strip" aria-label="Дни недели"></nav>
+
+    <div class="seg" role="tablist">
+      <button role="tab" data-view="day" class="active">День</button>
+      <button role="tab" data-view="week">Неделя</button>
+    </div>
+
+    <main id="content" class="content" aria-live="polite"></main>
+
+    <footer id="syncInfo" class="sync-info"></footer>
+
+    <div class="bottom-bar">
+      <button id="prevBtn" class="nav-btn" aria-label="Назад">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="todayBtn" class="today-btn">Сегодня</button>
+      <button id="nextBtn" class="nav-btn" aria-label="Вперёд">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ===== Настройки ===== -->
+  <dialog id="settings" class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <h2>Настройки</h2>
+      <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+    </div>
+
+    <div class="set-group">
+      <div class="set-row">
+        <div>
+          <div class="set-title" id="sGroup">—</div>
+          <div class="set-sub" id="sFaculty">—</div>
+        </div>
+        <button id="sChange" class="btn btn-sm">Сменить</button>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-label">Какая неделя сейчас</div>
+      <div class="seg seg-sm" id="sWeek">
+        <button data-v="top">Верхняя</button>
+        <button data-v="bottom">Нижняя</button>
+      </div>
+      <div class="set-hint">На сайте ОшТУ ячейка делится линией: сверху — верхняя неделя, снизу — нижняя. Недели чередуются автоматически.</div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-label">Семестр</div>
+      <div class="seg seg-sm" id="sSemester">
+        <button data-v="auto">Авто</button>
+        <button data-v="2">Осенний</button>
+        <button data-v="1">Весенний</button>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-label">Тема</div>
+      <div class="seg seg-sm" id="sTheme">
+        <button data-v="auto">Авто</button>
+        <button data-v="light">Светлая</button>
+        <button data-v="dark">Тёмная</button>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-label">Виджет на главный экран</div>
+      <div class="set-hint" id="widgetHint">
+        <b>Android:</b> установи приложение, затем зажми его иконку — появятся ярлыки «Сегодня», «Завтра», «Неделя», их можно перетащить на экран.
+        Для настоящего виджета поставь приложение-виджет для сайтов (например, «Web Widget» из Google Play) и вставь в него эту ссылку:
+      </div>
+      <div class="copy-row">
+        <input id="widgetUrl" readonly />
+        <button id="widgetCopy" class="btn btn-sm">Копировать</button>
+      </div>
+      <a id="widgetOpen" class="link" href="widget.html" target="_blank" rel="noopener">Открыть виджет →</a>
+    </div>
+
+    <div class="set-group">
+      <button id="sInstall" class="btn btn-primary btn-block" hidden>Установить приложение</button>
+      <div class="set-hint" id="iosHint" hidden><b>iPhone:</b> Safari → «Поделиться» → «На экран Домой».</div>
+      <button id="sRefresh" class="btn btn-block">Обновить расписание сейчас</button>
+    </div>
+
+    <p class="set-foot">Данные: portal.oshtu.kg · синхронизация каждые 20 минут · работает без интернета</p>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="config.js"></script>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
