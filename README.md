@@ -1,4 +1,19 @@
-# Расписание ОшТУ
+# Расписание для студентов ОшТУ
+
+Разработчик: компания **ESA**. Владелец: **Эркебаев Самат Адылович**.
+Неофициальное приложение; данные берутся из открытого раздела portal.oshtu.kg.
+Политика конфиденциальности: https://oshtu-schedule.onrender.com/privacy.html
+
+## Платформы
+| Платформа | Что | ID |
+|---|---|---|
+| Веб / PWA | https://oshtu-schedule.onrender.com | — |
+| Android | `oshtu-schedule.apk` (WebView + нативный виджет), исходники в `android-source.zip` | `kg.esa.oshtu.schedule` |
+| iOS | SwiftUI + WidgetKit, исходники в `ios-source.zip`, сборка в GitHub Actions (`.github/workflows/ios.yml`) | `kg.esa.oshtu.schedule` |
+
+Для публикации в App Store: распакуй `ios-source.zip` на Mac → `brew install xcodegen && xcodegen generate` →
+открой `OshtuSchedule.xcodeproj`, выбери свою команду (Team) в Signing, включи App Group
+`group.kg.esa.oshtu.schedule` → Product → Archive → Distribute App.
 
 Быстрое PWA-приложение с расписанием занятий [ОшТУ](https://portal.oshtu.kg/#/schedule).
 Ставится на телефон как приложение, показывает пары на сегодня, работает без интернета

@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Расписание ОшТУ</title>
+  <title>Расписание для студентов ОшТУ</title>
+  <meta name="author" content="ESA — Эркебаев Самат Адылович" />
   <meta name="description" content="Расписание занятий ОшТУ: сегодня, завтра, неделя. Работает офлайн." />
   <meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0d0f17" media="(prefers-color-scheme: dark)" />
@@ -28,7 +29,7 @@
   <section id="setup" class="setup" hidden>
     <div class="setup-card">
       <img src="icon.svg" alt="" class="setup-logo" width="64" height="64" />
-      <h1>Расписание ОшТУ</h1>
+      <h1>Расписание для студентов ОшТУ</h1>
       <p class="muted">Выбери свою группу один раз — дальше приложение само будет показывать пары на сегодня.</p>
 
       <label class="field">
@@ -186,7 +187,7 @@
       <div id="apkBlock">
         <div class="set-hint" style="margin-top:0">
           <b>Android:</b> скачай приложение — в нём есть настоящий виджет «Пары сегодня» с кнопками ‹ ›.
-          После установки открой приложение, выбери группу, затем: долгое нажатие на пустом месте экрана → <b>Виджеты</b> → «Расписание ОшТУ».
+          После установки открой приложение, выбери группу, затем: долгое нажатие на пустом месте экрана → <b>Виджеты</b> → «Расписание для студентов ОшТУ».
         </div>
         <a class="btn btn-primary btn-block" href="oshtu-schedule.apk" download style="display:block;text-align:center;text-decoration:none">Скачать приложение для Android (APK)</a>
         <div class="set-hint">Телефон спросит разрешение на установку из браузера — разреши для Chrome.</div>
@@ -198,7 +199,7 @@
         <a class="btn btn-primary btn-block" href="iphone.html" style="display:block;text-align:center;text-decoration:none">Настроить виджет для iPhone</a>
       </div>
       <div class="set-hint" id="appWidgetHint" hidden style="margin-top:0">
-        Долгое нажатие на пустом месте рабочего стола → <b>Виджеты</b> → найди «Расписание ОшТУ» → перетащи на экран.
+        Долгое нажатие на пустом месте рабочего стола → <b>Виджеты</b> → найди «Расписание для студентов ОшТУ» → перетащи на экран.
         В виджете: ‹ › — другой день, нажатие на заголовок — вернуться к сегодня, на строку «обновлено» — обновить.
       </div>
       <details style="margin-top:10px">
@@ -217,7 +218,16 @@
       <button id="sRefresh" class="btn btn-block">Обновить расписание сейчас</button>
     </div>
 
-    <p class="set-foot">Данные: portal.oshtu.kg · синхронизация каждые 20 минут · работает без интернета</p>
+    <div class="set-group about">
+      <div class="set-label">О приложении</div>
+      <div class="set-title" style="font-size:15px">Расписание для студентов ОшТУ</div>
+      <div class="set-sub">Разработчик: компания <b>ESA</b></div>
+      <div class="set-sub">Владелец: Эркебаев Самат Адылович</div>
+      <div class="set-hint">Неофициальное приложение. Расписание берётся с открытого раздела сайта portal.oshtu.kg и синхронизируется каждые 20 минут. Работает без интернета.</div>
+      <a class="link" href="privacy.html">Политика конфиденциальности →</a>
+    </div>
+
+    <p class="set-foot">© 2026 ESA · Эркебаев Самат Адылович</p>
   </dialog>
 
   <div id="toast" class="toast" role="status"></div>

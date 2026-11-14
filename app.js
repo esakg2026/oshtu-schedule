@@ -25,12 +25,16 @@
   const semesterId = () => (settings.semester && settings.semester !== "auto" ? Number(settings.semester) : C.autoSemester());
   const cacheKey = () => `oshtu.sched.${settings.groupId}.${semesterId()}`;
   // В Android-приложении передаём выбор группы нативному виджету
-  const inApp = () => !!(window.OshtuAndroid && window.OshtuAndroid.saveSettings);
+  const iosBridge = () => window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.oshtu;
+  const inApp = () => !!((window.OshtuAndroid && window.OshtuAndroid.saveSettings) || iosBridge());
   const isIOS = () =>
     /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   function pushToAndroid() {
     try {
-      if (inApp() && settings.groupId) window.OshtuAndroid.saveSettings(JSON.stringify(settings));
+      if (!settings.groupId) return;
+      const json = JSON.stringify(settings);
+      if (window.OshtuAndroid && window.OshtuAndroid.saveSettings) window.OshtuAndroid.saveSettings(json);
+      else if (iosBridge()) iosBridge().postMessage(json);
     } catch {}
   }
   const saveSettings = () => {
@@ -516,8 +520,12 @@
     $("widgetOpen").href = widgetUrl();
     $("sInstall").hidden = !deferredPrompt || inApp();
     $("apkBlock").hidden = inApp() || isIOS();
-    $("iosBlock").hidden = !isIOS();
+    $("iosBlock").hidden = !isIOS() || inApp();
     $("appWidgetHint").hidden = !inApp();
+    if (iosBridge()) {
+      $("appWidgetHint").innerHTML =
+        "Долгое нажатие на пустом месте экрана → <b>Править</b> → <b>Добавить виджет</b> → найди «Расписание для студентов ОшТУ». На экране блокировки тоже можно. ‹ › в виджете — другой день (iOS 17+).";
+    }
     $("iosHint").hidden = !(/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone());
     if (dlg.showModal) dlg.showModal();
     else dlg.setAttribute("open", "");

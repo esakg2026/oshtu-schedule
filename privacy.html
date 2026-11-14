@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Политика конфиденциальности</title>
+  <meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0d0f17" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .page { max-width: 680px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 16px 40px; }
+    .back { color: var(--accent); text-decoration: none; font-weight: 600; }
+    h1 { font-size: 26px; letter-spacing: -0.02em; margin: 14px 0 4px; }
+    h2 { font-size: 17px; margin: 22px 0 6px; }
+    p, li { color: var(--text); font-size: 15px; line-height: 1.55; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .card { background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 4px 18px 16px; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <a class="back" href="./">‹ К расписанию</a>
+    <h1>Политика конфиденциальности</h1>
+    <p class="muted">Приложение «Расписание для студентов ОшТУ» (веб-версия, Android и iOS). Действует с 15 ноября 2026 г.</p>
+
+    <div class="card">
+      <h2>Кто мы</h2>
+      <p>Приложение разработано компанией <b>ESA</b>. Владелец — <b>Эркебаев Самат Адылович</b>.
+        Приложение неофициальное и не связано с администрацией Ошского технологического университета им. акад. М.М. Адышева.</p>
+
+      <h2>Какие данные мы обрабатываем</h2>
+      <ul>
+        <li><b>Выбранная группа, семестр и настройки</b> (тема, неделя) хранятся только на вашем устройстве.</li>
+        <li>Чтобы показать расписание, приложение отправляет на сервер <b>номер группы и семестр</b>. Сервер хранит расписание группы и время последнего запроса, чтобы обновлять его автоматически.</li>
+        <li>Мы <b>не собираем</b> имя, телефон, email, геолокацию, контакты, фото и другие личные данные. Регистрация не нужна.</li>
+        <li>Рекламы, аналитики и трекеров нет.</li>
+      </ul>
+
+      <h2>Откуда берётся расписание</h2>
+      <p>Из открытого раздела «Расписание занятий» сайта portal.oshtu.kg. Данные копируются в нашу базу (Supabase), чтобы приложение работало, даже когда сайт университета недоступен.</p>
+
+      <h2>Сторонние сервисы</h2>
+      <ul>
+        <li><b>Render</b> — хостинг сайта приложения.</li>
+        <li><b>Supabase</b> — база данных с расписанием.</li>
+      </ul>
+      <p>Как любые веб-серверы, они могут временно хранить технические журналы (IP-адрес, время запроса) для защиты и работы сервиса.</p>
+
+      <h2>Удаление данных</h2>
+      <p>Все личные настройки хранятся на вашем устройстве: удалите приложение или очистите данные сайта — и они исчезнут.</p>
+
+      <h2>Контакты</h2>
+      <p>Вопросы о приложении и данных: <a href="https://github.com/esakg2026/oshtu-schedule/issues">github.com/esakg2026/oshtu-schedule</a>.</p>
+    </div>
+
+    <p class="muted" style="text-align:center;margin-top:20px">© 2026 ESA · Эркебаев Самат Адылович</p>
+  </div>
+</body>
+</html>
