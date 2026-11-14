@@ -92,9 +92,9 @@
     <div id="apkBanner" class="install-banner" hidden>
       <div>
         <strong>Виджет на рабочий стол</strong>
-        <span>Скачай Android-приложение с виджетом</span>
+        <span id="apkBannerText">Скачай Android-приложение с виджетом</span>
       </div>
-      <a href="oshtu-schedule.apk" download class="btn btn-primary btn-sm" style="text-decoration:none">Скачать</a>
+      <a id="apkBannerBtn" href="oshtu-schedule.apk" download class="btn btn-primary btn-sm" style="text-decoration:none">Скачать</a>
       <button id="apkClose" class="icon-btn" aria-label="Скрыть">✕</button>
     </div>
 
@@ -190,6 +190,12 @@
         </div>
         <a class="btn btn-primary btn-block" href="oshtu-schedule.apk" download style="display:block;text-align:center;text-decoration:none">Скачать приложение для Android (APK)</a>
         <div class="set-hint">Телефон спросит разрешение на установку из браузера — разреши для Chrome.</div>
+      </div>
+      <div id="iosBlock" hidden>
+        <div class="set-hint" style="margin-top:0">
+          <b>iPhone:</b> виджет на домашний экран и экран блокировки через бесплатное приложение Scriptable — настройка за 1 минуту.
+        </div>
+        <a class="btn btn-primary btn-block" href="iphone.html" style="display:block;text-align:center;text-decoration:none">Настроить виджет для iPhone</a>
       </div>
       <div class="set-hint" id="appWidgetHint" hidden style="margin-top:0">
         Долгое нажатие на пустом месте рабочего стола → <b>Виджеты</b> → найди «Расписание ОшТУ» → перетащи на экран.

@@ -26,6 +26,8 @@
   const cacheKey = () => `oshtu.sched.${settings.groupId}.${semesterId()}`;
   // В Android-приложении передаём выбор группы нативному виджету
   const inApp = () => !!(window.OshtuAndroid && window.OshtuAndroid.saveSettings);
+  const isIOS = () =>
+    /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   function pushToAndroid() {
     try {
       if (inApp() && settings.groupId) window.OshtuAndroid.saveSettings(JSON.stringify(settings));
@@ -513,7 +515,8 @@
     $("widgetUrl").value = widgetUrl();
     $("widgetOpen").href = widgetUrl();
     $("sInstall").hidden = !deferredPrompt || inApp();
-    $("apkBlock").hidden = inApp();
+    $("apkBlock").hidden = inApp() || isIOS();
+    $("iosBlock").hidden = !isIOS();
     $("appWidgetHint").hidden = !inApp();
     $("iosHint").hidden = !(/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone());
     if (dlg.showModal) dlg.showModal();
@@ -626,9 +629,15 @@
     if (deferredPrompt && !C.store.get("oshtu.installDismissed") && !inApp()) $("installBanner").hidden = false;
     if (!state.data) loadCached();
     pushToAndroid();
-    const wantApk = /android/i.test(navigator.userAgent) && !inApp() && !C.store.get("oshtu.apkDismissed");
+    const wantApk = (/android/i.test(navigator.userAgent) || isIOS()) && !inApp() && !C.store.get("oshtu.apkDismissed");
     $("apkBanner").hidden = !wantApk;
     if (wantApk) $("installBanner").hidden = true;
+    if (isIOS()) {
+      $("apkBannerText").textContent = "Пары на домашнем экране iPhone";
+      $("apkBannerBtn").textContent = "Настроить";
+      $("apkBannerBtn").href = "iphone.html";
+      $("apkBannerBtn").removeAttribute("download");
+    }
     state.date = defaultDate();
 
     const p = new URLSearchParams(location.search);
