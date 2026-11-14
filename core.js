@@ -240,7 +240,31 @@
     return { state: "after" };
   }
 
+  // ---------- версии по неделям ----------
+  // ОшТУ каждую субботу выкладывает расписание следующей недели, база хранит версию каждой недели.
+  const pad = (n) => String(n).padStart(2, "0");
+  const weekKey = (d) => {
+    const m = mondayOf(d);
+    return `${m.getFullYear()}-${pad(m.getMonth() + 1)}-${pad(m.getDate())}`;
+  };
+
+  // Расписание (уже разобранное) для недели, в которую входит date.
+  // data = ответ oshtu_schedule: { raw, weeks: [{week_start, raw}] }
+  function daysFor(data, date) {
+    if (!data) return null;
+    const cache = data._parsed || (Object.defineProperty(data, "_parsed", { value: {}, enumerable: false }), data._parsed);
+    const key = weekKey(date);
+    if (cache[key]) return cache[key];
+    const weeks = (data.weeks || []).slice().sort((a, b) => (a.week_start < b.week_start ? -1 : 1));
+    let pick = weeks.find((w) => w.week_start === key);
+    if (!pick) pick = weeks.filter((w) => w.week_start < key).pop(); // будущие недели — последняя известная версия
+    if (!pick) pick = weeks[0]; // давние прошлые — самая ранняя сохранённая
+    cache[key] = parseSchedule(pick ? pick.raw : data.raw);
+    return cache[key];
+  }
+
   window.Core = {
+    weekKey, daysFor,
     PAIR_TIMES, TYPES, store, rpc, parseSchedule, weekType, autoSemester,
     startOfDay, addDays, mondayOf, sameDay, weekdayIndex, toMin, nowMin, fmtDuration,
     dayLessons, dayStatus,

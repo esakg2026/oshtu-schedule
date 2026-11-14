@@ -1,6 +1,6 @@
 // Service worker: приложение открывается мгновенно и работает без интернета.
 // При изменении файлов увеличь VERSION.
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = `oshtu-shell-${VERSION}`;
 const SHELL = [
   "./",
@@ -37,6 +37,7 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith(".apk") || url.pathname.startsWith("/sb/")) return;
 
   const isNav = req.mode === "navigate";
   const cacheKey = isNav ? (url.pathname.endsWith("widget.html") ? "widget.html" : "index.html") : req;

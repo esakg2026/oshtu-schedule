@@ -155,3 +155,48 @@ grant execute on function public.oshtu_semesters(), public.oshtu_faculties(), pu
   public.oshtu_schedule(int, int, text, int) to anon, authenticated;
 
 select cron.schedule('oshtu-sync', '*/20 * * * *', 'select oshtu_private.sync_all()');
+
+-- ===== Версии по неделям (ОшТУ каждую субботу выкладывает расписание следующей недели) =====
+create table if not exists public.oshtu_schedule_weeks (
+  group_id integer not null,
+  semester_id integer not null,
+  week_start date not null,          -- понедельник недели (Asia/Bishkek)
+  raw jsonb not null,
+  hash text not null,
+  updated_at timestamptz not null default now(),
+  primary key (group_id, semester_id, week_start)
+);
+alter table public.oshtu_schedule_weeks enable row level security;
+create policy "oshtu public read weeks" on public.oshtu_schedule_weeks for select to anon, authenticated using (true);
+
+-- изменения в субботу после 12:00 и в воскресенье → следующая неделя, иначе → текущая
+create or replace function oshtu_private.store_week(p_group int, p_semester int, p_raw jsonb)
+returns void language plpgsql security definer set search_path = '' as $$
+declare
+  v_now timestamp := now() at time zone 'Asia/Bishkek';
+  v_mon date := date_trunc('week', v_now)::date;
+  v_dow int := extract(isodow from v_now);
+  v_late boolean := v_dow = 7 or (v_dow = 6 and extract(hour from v_now) >= 12);
+  v_hash text := md5(p_raw::text);
+begin
+  if v_late then
+    insert into public.oshtu_schedule_weeks (group_id, semester_id, week_start, raw, hash)
+    values (p_group, p_semester, v_mon, p_raw, v_hash) on conflict do nothing;
+    v_mon := v_mon + 7;
+  end if;
+  insert into public.oshtu_schedule_weeks as w (group_id, semester_id, week_start, raw, hash)
+  values (p_group, p_semester, v_mon, p_raw, v_hash)
+  on conflict (group_id, semester_id, week_start) do update
+    set raw = excluded.raw, hash = excluded.hash, updated_at = now()
+    where w.hash is distinct from excluded.hash;
+end $$;
+
+create or replace function oshtu_private.weeks_json(p_group int, p_semester int)
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object('week_start', week_start, 'raw', raw, 'hash', hash) order by week_start), '[]'::jsonb)
+  from public.oshtu_schedule_weeks
+  where group_id = p_group and semester_id = p_semester
+    and week_start >= (date_trunc('week', now() at time zone 'Asia/Bishkek')::date - 14);
+$$;
+-- refresh() вызывает store_week() после успешной загрузки, а oshtu_schedule()/refresh()
+-- добавляют в ответ поле "weeks": oshtu_private.weeks_json(group, semester).

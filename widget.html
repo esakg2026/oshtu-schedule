@@ -67,7 +67,7 @@
         let d = C.startOfDay(new Date());
         if (C.weekdayIndex(d) === 7) return { d: C.addDays(d, 1), label: "Завтра" };
         if (data) {
-          const st = C.dayStatus(C.dayLessons(C.parseSchedule(data.raw), d, flip));
+          const st = C.dayStatus(C.dayLessons(C.daysFor(data, d), d, flip));
           if (st.state === "after" || (st.state === "none" && new Date().getHours() >= 17)) {
             d = C.addDays(d, 1);
             if (C.weekdayIndex(d) === 7) d = C.addDays(d, 1);
@@ -86,7 +86,7 @@
         }
         if (!data) return;
         const { d, label } = pickDay();
-        const list = C.dayLessons(C.parseSchedule(data.raw), d, flip);
+        const list = C.dayLessons(C.daysFor(data, d), d, flip);
         const wt = C.weekType(d, flip) === "top" ? "верхняя" : "нижняя";
         document.getElementById("title").textContent = label;
         document.getElementById("sub").textContent =

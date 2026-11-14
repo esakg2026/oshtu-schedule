@@ -89,6 +89,15 @@
       <button id="installClose" class="icon-btn" aria-label="Скрыть">✕</button>
     </div>
 
+    <div id="apkBanner" class="install-banner" hidden>
+      <div>
+        <strong>Виджет на рабочий стол</strong>
+        <span>Скачай Android-приложение с виджетом</span>
+      </div>
+      <a href="oshtu-schedule.apk" download class="btn btn-primary btn-sm" style="text-decoration:none">Скачать</a>
+      <button id="apkClose" class="icon-btn" aria-label="Скрыть">✕</button>
+    </div>
+
     <div class="hero">
       <div class="hero-top">
         <span id="dayLabel" class="hero-label">Сегодня</span>
@@ -174,15 +183,26 @@
 
     <div class="set-group">
       <div class="set-label">Виджет на главный экран</div>
-      <div class="set-hint" id="widgetHint">
-        <b>Android:</b> установи приложение, затем зажми его иконку — появятся ярлыки «Сегодня», «Завтра», «Неделя», их можно перетащить на экран.
-        Для настоящего виджета поставь приложение-виджет для сайтов (например, «Web Widget» из Google Play) и вставь в него эту ссылку:
+      <div id="apkBlock">
+        <div class="set-hint" style="margin-top:0">
+          <b>Android:</b> скачай приложение — в нём есть настоящий виджет «Пары сегодня» с кнопками ‹ ›.
+          После установки открой приложение, выбери группу, затем: долгое нажатие на пустом месте экрана → <b>Виджеты</b> → «Расписание ОшТУ».
+        </div>
+        <a class="btn btn-primary btn-block" href="oshtu-schedule.apk" download style="display:block;text-align:center;text-decoration:none">Скачать приложение для Android (APK)</a>
+        <div class="set-hint">Телефон спросит разрешение на установку из браузера — разреши для Chrome.</div>
       </div>
-      <div class="copy-row">
-        <input id="widgetUrl" readonly />
-        <button id="widgetCopy" class="btn btn-sm">Копировать</button>
+      <div class="set-hint" id="appWidgetHint" hidden style="margin-top:0">
+        Долгое нажатие на пустом месте рабочего стола → <b>Виджеты</b> → найди «Расписание ОшТУ» → перетащи на экран.
+        В виджете: ‹ › — другой день, нажатие на заголовок — вернуться к сегодня, на строку «обновлено» — обновить.
       </div>
-      <a id="widgetOpen" class="link" href="widget.html" target="_blank" rel="noopener">Открыть виджет →</a>
+      <details style="margin-top:10px">
+        <summary class="set-hint" style="cursor:pointer">Веб-виджет (для iPhone и других приложений)</summary>
+        <div class="copy-row">
+          <input id="widgetUrl" readonly />
+          <button id="widgetCopy" class="btn btn-sm">Копировать</button>
+        </div>
+        <a id="widgetOpen" class="link" href="widget.html" target="_blank" rel="noopener">Открыть веб-виджет →</a>
+      </details>
     </div>
 
     <div class="set-group">

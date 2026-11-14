@@ -24,7 +24,17 @@
 
   const semesterId = () => (settings.semester && settings.semester !== "auto" ? Number(settings.semester) : C.autoSemester());
   const cacheKey = () => `oshtu.sched.${settings.groupId}.${semesterId()}`;
-  const saveSettings = () => C.store.set(SETTINGS_KEY, settings);
+  // В Android-приложении передаём выбор группы нативному виджету
+  const inApp = () => !!(window.OshtuAndroid && window.OshtuAndroid.saveSettings);
+  function pushToAndroid() {
+    try {
+      if (inApp() && settings.groupId) window.OshtuAndroid.saveSettings(JSON.stringify(settings));
+    } catch {}
+  }
+  const saveSettings = () => {
+    C.store.set(SETTINGS_KEY, settings);
+    pushToAndroid();
+  };
 
   // ================= утилиты =================
   function toast(msg, ms = 2600) {
@@ -64,7 +74,7 @@
       state.autoAdvanced = true;
       return C.addDays(d, 1);
     }
-    const list = state.data ? C.dayLessons(state.data.days, d, settings.weekFlip) : [];
+    const list = state.data ? lessonsOn(d) : [];
     const st = C.dayStatus(list);
     if ((st.state === "after" || (st.state === "none" && new Date().getHours() >= 17)) && state.data) {
       state.autoAdvanced = true;
@@ -74,11 +84,17 @@
     return d;
   }
 
+  // пары конкретного дня — из версии расписания той недели, к которой относится день
+  function lessonsOn(d) {
+    return state.data ? C.dayLessons(C.daysFor(state.data, d), d, settings.weekFlip) : [];
+  }
+
   // ================= данные =================
+  const weekHash = (data, key) => ((data && data.weeks) || []).find((w) => w.week_start === key)?.hash || null;
+
   function applyData(r, fromNetwork) {
     const prev = state.data;
     const data = {
-      days: C.parseSchedule(r.raw),
       hash: r.hash,
       checked_at: r.checked_at,
       changed_at: r.changed_at,
@@ -87,11 +103,21 @@
       group_name: r.group_name,
       savedAt: Date.now(),
       raw: r.raw,
+      weeks: r.weeks || [],
     };
     state.data = data;
-    C.store.set(cacheKey(), { ...r, savedAt: data.savedAt });
+    const { _parsed, ...plain } = r;
+    C.store.set(cacheKey(), { ...plain, savedAt: data.savedAt });
     if (fromNetwork && prev && prev.hash && prev.hash !== data.hash) {
-      toast("Расписание изменилось на сайте ОшТУ — обновлено");
+      const thisWeek = C.weekKey(new Date());
+      const nextWeek = C.weekKey(C.addDays(new Date(), 7));
+      if (weekHash(prev, thisWeek) && weekHash(prev, thisWeek) !== weekHash(data, thisWeek)) {
+        toast("Расписание этой недели изменилось на сайте ОшТУ");
+      } else if (weekHash(prev, nextWeek) !== weekHash(data, nextWeek)) {
+        toast("Вышло расписание на следующую неделю");
+      } else {
+        toast("Расписание обновлено");
+      }
     }
   }
 
@@ -177,7 +203,7 @@
     // карточка «сейчас»
     const card = $("nowCard");
     const today = C.startOfDay(new Date());
-    const list = state.data ? C.dayLessons(state.data.days, today, settings.weekFlip) : [];
+    const list = state.data ? lessonsOn(today) : [];
     const st = C.dayStatus(list);
     const showFor = state.view === "day" ? isToday : C.sameDay(C.mondayOf(d), C.mondayOf(today));
     card.hidden = true;
@@ -204,7 +230,7 @@
       card.classList.add("calm");
       const todayIsSunday = C.weekdayIndex(today) === 7;
       $("nowTitle").textContent = todayIsSunday ? "Сегодня выходной" : "На сегодня пары закончились";
-      const next = C.dayLessons(state.data.days, d, settings.weekFlip).filter((p) => p.start);
+      const next = lessonsOn(d).filter((p) => p.start);
       $("nowTime").textContent = "";
       $("nowSub").textContent = next.length
         ? `${relLabel(d)} первая пара в ${next[0].start} — ${next[0].lessons[0].subject}`
@@ -218,7 +244,7 @@
     let html = "";
     for (let i = 0; i < 6; i++) {
       const d = C.addDays(mon, i);
-      const cnt = state.data ? C.dayLessons(state.data.days, d, settings.weekFlip).length : 0;
+      const cnt = state.data ? lessonsOn(d).length : 0;
       const cls = ["wd", C.sameDay(d, today) ? "today" : "", state.view === "day" && C.sameDay(d, state.date) ? "sel" : ""].join(" ");
       html += `<button class="${cls}" data-i="${i}"><small>${WD_SHORT[i + 1]}</small><b>${d.getDate()}</b><span class="cnt">${cnt ? cnt + " " + plural(cnt, "пара", "пары", "пар") : "—"}</span></button>`;
     }
@@ -259,7 +285,7 @@
     if (C.weekdayIndex(d) === 7) {
       return `<div class="empty"><div class="big">🌤️</div><h3>Воскресенье</h3><p>Выходной — отдыхай!</p></div>`;
     }
-    const list = C.dayLessons(state.data.days, d, settings.weekFlip);
+    const list = lessonsOn(d);
     if (!list.length) {
       return `<div class="empty"><div class="big">🎉</div><h3>Пар нет</h3><p>${esc(relLabel(d))} свободный день</p></div>`;
     }
@@ -298,7 +324,7 @@
     let html = "";
     for (let i = 0; i < 6; i++) {
       const d = C.addDays(mon, i);
-      const list = C.dayLessons(state.data.days, d, settings.weekFlip);
+      const list = lessonsOn(d);
       const today = C.sameDay(d, new Date());
       html += `<section class="wk-day${today ? " today" : ""}">
         <div class="wk-head" data-day="${i}"><b>${cap(d.toLocaleDateString("ru-RU", { weekday: "long" }))}${today ? " · сегодня" : ""}</b><span>${d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}</span></div>
@@ -486,7 +512,9 @@
     setSeg("sTheme", settings.theme || "auto");
     $("widgetUrl").value = widgetUrl();
     $("widgetOpen").href = widgetUrl();
-    $("sInstall").hidden = !deferredPrompt;
+    $("sInstall").hidden = !deferredPrompt || inApp();
+    $("apkBlock").hidden = inApp();
+    $("appWidgetHint").hidden = !inApp();
     $("iosHint").hidden = !(/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone());
     if (dlg.showModal) dlg.showModal();
     else dlg.setAttribute("open", "");
@@ -575,7 +603,7 @@
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    if (!C.store.get("oshtu.installDismissed") && !$("main").hidden) $("installBanner").hidden = false;
+    if (!C.store.get("oshtu.installDismissed") && !$("main").hidden && $("apkBanner").hidden && !inApp()) $("installBanner").hidden = false;
   });
   window.addEventListener("appinstalled", () => {
     deferredPrompt = null;
@@ -595,8 +623,12 @@
   function startMain() {
     $("setup").hidden = true;
     $("main").hidden = false;
-    if (deferredPrompt && !C.store.get("oshtu.installDismissed")) $("installBanner").hidden = false;
+    if (deferredPrompt && !C.store.get("oshtu.installDismissed") && !inApp()) $("installBanner").hidden = false;
     if (!state.data) loadCached();
+    pushToAndroid();
+    const wantApk = /android/i.test(navigator.userAgent) && !inApp() && !C.store.get("oshtu.apkDismissed");
+    $("apkBanner").hidden = !wantApk;
+    if (wantApk) $("installBanner").hidden = true;
     state.date = defaultDate();
 
     const p = new URLSearchParams(location.search);
@@ -620,6 +652,10 @@
     $("groupBtn").onclick = () => showSetup(true);
     $("syncBtn").onclick = () => sync({ force: true });
     $("installBtn").onclick = promptInstall;
+    $("apkClose").onclick = () => {
+      $("apkBanner").hidden = true;
+      C.store.set("oshtu.apkDismissed", true);
+    };
     $("installClose").onclick = () => {
       $("installBanner").hidden = true;
       C.store.set("oshtu.installDismissed", true);
