@@ -1,6 +1,6 @@
 // Service worker: приложение открывается мгновенно и работает без интернета.
 // При изменении файлов увеличь VERSION.
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE = `oshtu-shell-${VERSION}`;
 const SHELL = [
   "./",
@@ -11,6 +11,8 @@ const SHELL = [
   "app.js",
   "widget.html",
   "iphone.html",
+  "privacy.html",
+  "oshtu_chime.wav",
   "manifest.webmanifest",
   "icon.svg",
   "icon-192.png",
@@ -28,6 +30,17 @@ self.addEventListener("activate", (e) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k.startsWith("oshtu-shell-") && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
+  );
+});
+
+// Нажатие на напоминание — открыть приложение
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) if ("focus" in c) return c.focus();
+      return self.clients.openWindow("./");
+    }),
   );
 });
 

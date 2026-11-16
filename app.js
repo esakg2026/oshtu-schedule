@@ -11,35 +11,60 @@
     '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>';
   const ICON_PIN =
     '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+  const ICON_GROUP =
+    '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+  const ICON_CLOCK =
+    '<svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
+  // ---------- настройки (с переходом со старого формата «только группа») ----------
   let settings = C.store.get(SETTINGS_KEY, {}) || {};
+  if (settings.groupId && !settings.mode) {
+    settings.mode = "group";
+    settings.targetId = settings.groupId;
+    settings.targetName = settings.groupName;
+  }
+  if (settings.notify == null) settings.notify = 5;
+
   const state = {
     date: null,
     view: "day",
+    section: "classes",
     data: null,
+    exams: { 0: null, 1: null },
     sync: "idle",
     lastAttempt: 0,
     autoAdvanced: false,
   };
 
+  const mode = () => settings.mode || "group";
   const semesterId = () => (settings.semester && settings.semester !== "auto" ? Number(settings.semester) : C.autoSemester());
-  const cacheKey = () => `oshtu.sched.${settings.groupId}.${semesterId()}`;
-  // В Android-приложении передаём выбор группы нативному виджету
+  const cacheKey = () => `oshtu.tt.${mode()}.${settings.targetId}.${semesterId()}`;
+  const examKey = (t) => `oshtu.ex.${t}.${mode()}.${settings.targetId}.${semesterId()}`;
+
+  // мост к нативным приложениям (Android / iOS): выбор + настройки напоминаний
   const iosBridge = () => window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.oshtu;
-  const inApp = () => !!((window.OshtuAndroid && window.OshtuAndroid.saveSettings) || iosBridge());
+  const androidBridge = () => window.OshtuAndroid && window.OshtuAndroid.saveSettings ? window.OshtuAndroid : null;
+  const inApp = () => !!(androidBridge() || iosBridge());
   const isIOS = () =>
     /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  function pushToAndroid() {
+
+  function pushToNative() {
     try {
-      if (!settings.groupId) return;
-      const json = JSON.stringify(settings);
-      if (window.OshtuAndroid && window.OshtuAndroid.saveSettings) window.OshtuAndroid.saveSettings(json);
+      if (!settings.targetId) return;
+      const payload = {
+        ...settings,
+        // совместимость со старыми версиями приложений (понимали только группы)
+        groupId: mode() === "group" ? settings.targetId : 0,
+        groupName: mode() === "group" ? settings.targetName : "",
+      };
+      const json = JSON.stringify(payload);
+      if (androidBridge()) androidBridge().saveSettings(json);
       else if (iosBridge()) iosBridge().postMessage(json);
     } catch {}
   }
   const saveSettings = () => {
     C.store.set(SETTINGS_KEY, settings);
-    pushToAndroid();
+    pushToNative();
   };
 
   // ================= утилиты =================
@@ -72,7 +97,19 @@
     return diff > 0 ? `Через ${diff} дн.` : `${-diff} дн. назад`;
   }
 
-  // Какой день показать при открытии: сегодня, а после окончания пар (или в воскресенье) — следующий учебный день
+  function plural(n, one, few, many) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+  }
+
+  // краткая подпись занятия в зависимости от режима (для карточки «сейчас», уведомлений)
+  function lessonLine(l) {
+    const extra = mode() === "teacher" ? [l.group, l.room] : mode() === "room" ? [l.group, l.teacher] : [l.room];
+    return [l.subject, ...extra].filter(Boolean).join(" · ");
+  }
+
   function defaultDate() {
     let d = C.startOfDay(new Date());
     state.autoAdvanced = false;
@@ -90,30 +127,28 @@
     return d;
   }
 
-  // пары конкретного дня — из версии расписания той недели, к которой относится день
   function lessonsOn(d) {
     return state.data ? C.dayLessons(C.daysFor(state.data, d), d, settings.weekFlip) : [];
   }
 
-  // ================= данные =================
+  // ================= данные: занятия =================
   const weekHash = (data, key) => ((data && data.weeks) || []).find((w) => w.week_start === key)?.hash || null;
 
   function applyData(r, fromNetwork) {
     const prev = state.data;
     const data = {
+      kind: mode(),
       hash: r.hash,
       checked_at: r.checked_at,
       changed_at: r.changed_at,
       source: r.source,
       error: r.error || null,
-      group_name: r.group_name,
       savedAt: Date.now(),
       raw: r.raw,
       weeks: r.weeks || [],
     };
     state.data = data;
-    const { _parsed, ...plain } = r;
-    C.store.set(cacheKey(), { ...plain, savedAt: data.savedAt });
+    C.store.set(cacheKey(), { ...r, savedAt: data.savedAt });
     if (fromNetwork && prev && prev.hash && prev.hash !== data.hash) {
       const thisWeek = C.weekKey(new Date());
       const nextWeek = C.weekKey(C.addDays(new Date(), 7));
@@ -138,15 +173,16 @@
   }
 
   async function sync({ force = false, silent = false } = {}) {
-    if (!settings.groupId || state.inFlight) return;
+    if (!settings.targetId || state.inFlight) return;
     state.inFlight = true;
     state.lastAttempt = Date.now();
     setSync("busy");
     try {
-      const r = await C.rpc("oshtu_schedule", {
-        p_group: settings.groupId,
+      const r = await C.rpc("oshtu_timetable", {
+        p_kind: mode(),
+        p_id: settings.targetId,
         p_semester: semesterId(),
-        p_name: settings.groupName || null,
+        p_name: settings.targetName || null,
         p_max_age_sec: force ? 30 : 60,
       });
       const hadData = !!state.data;
@@ -157,37 +193,108 @@
       if (force && !silent) toast(r.source === "stale" ? "Сайт ОшТУ недоступен — показана сохранённая копия" : "Расписание актуально");
     } catch (e) {
       setSync(navigator.onLine ? "error" : "off");
-      if (!state.data) renderError(e);
+      if (!state.data) renderError();
       else renderFooter();
       if (force && !silent) toast(navigator.onLine ? "Не удалось обновить — показана сохранённая копия" : "Нет интернета — показана сохранённая копия");
     } finally {
       state.inFlight = false;
     }
+    if (state.section !== "classes") loadExams(state.section === "laz" ? 1 : 0);
   }
 
   function setSync(s) {
     state.sync = s;
-    const dot = $("syncDot");
-    dot.className = "dot " + ({ busy: "busy", ok: "ok", stale: "stale", error: "off", off: "off" }[s] || "");
+    $("syncDot").className = "dot " + ({ busy: "busy", ok: "ok", stale: "stale", error: "off", off: "off" }[s] || "");
     $("syncText").textContent =
       { busy: "Обновление…", ok: "Онлайн", stale: "ОшТУ недоступен", error: "Ошибка сети", off: "Офлайн" }[s] || "";
     renderFooter();
   }
 
+  // ================= данные: зачёты/экзамены (0) и ЛАЗ (1) =================
+  async function loadExams(type) {
+    if (!state.exams[type]) state.exams[type] = C.store.get(examKey(type));
+    renderExams();
+    try {
+      const r = await C.rpc("oshtu_exams", { p_kind: mode(), p_id: settings.targetId, p_semester: semesterId(), p_type: type });
+      state.exams[type] = { list: r.data || [], at: r.updated_at, source: r.source };
+      C.store.set(examKey(type), state.exams[type]);
+    } catch {
+      if (state.exams[type]) state.exams[type].source = "local";
+    }
+    renderExams();
+  }
+
+  function renderExams() {
+    if (state.section === "classes") return;
+    const type = state.section === "laz" ? 1 : 0;
+    const box = $("examsList");
+    const ex = state.exams[type];
+    const what = type === 1 ? "ЛАЗ (лабораторно-аудиторных занятий)" : "зачётов и экзаменов";
+    if (!ex) {
+      box.innerHTML = `<div class="empty"><div class="big">⏳</div><h3>Загружаю…</h3></div>`;
+      return;
+    }
+    if (!ex.list.length) {
+      box.innerHTML = `<div class="empty"><div class="big">${type === 1 ? "🧪" : "📝"}</div><h3>Пока не опубликован</h3>
+        <p>График ${what} ещё не появился на сайте ОшТУ. Как только его выложат — он будет здесь автоматически.</p></div>`;
+      return;
+    }
+    const today = C.startOfDay(new Date());
+    const rows = ex.list
+      .map((e) => ({ e, d: C.parseAnyDate(e.ExamDate) }))
+      .sort((a, b) => (a.d && b.d ? a.d - b.d : a.d ? -1 : 1));
+    box.innerHTML = rows
+      .map(({ e, d }) => {
+        const days = d ? Math.round((d - today) / 864e5) : null;
+        const cls = ["exam", days != null && days < 0 ? "past" : "", days != null && days >= 0 && days <= 3 ? "soon" : ""].join(" ");
+        const left = days == null ? "" : days === 0 ? "Сегодня" : days === 1 ? "Завтра" : days > 1 ? `Через ${days} ${plural(days, "день", "дня", "дней")}` : "";
+        const cd = C.parseAnyDate(e.ConsultDate);
+        const consult = e.ConsultDate || e.ConsultTime
+          ? `<div class="consult">Консультация: ${esc(cd ? cd.toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : e.ConsultDate || "")}${e.ConsultTime ? " · " + esc(e.ConsultTime) : ""}${e.ConsultAuditoryName ? " · ауд. " + esc(e.ConsultAuditoryName) : ""}</div>`
+          : "";
+        const teacher = [e.ShortFIO, e.AssistentShortFIO].filter(Boolean).join(", ");
+        return `<article class="${cls}">
+          <div class="exam-date">${d ? `<b>${d.getDate()}</b><span>${d.toLocaleDateString("ru-RU", { month: "short" }).replace(".", "")}</span><small>${d.toLocaleDateString("ru-RU", { weekday: "short" })}</small>` : `<b>—</b><small>${esc(e.ExamDate || "")}</small>`}</div>
+          <div>
+            <div class="lesson-head"><div class="subject">${esc(e.SubjectName)}</div>${e.ExamTypeName ? `<span class="tag lec">${esc(e.ExamTypeName)}</span>` : ""}</div>
+            <div class="meta">
+              ${e.ExamTime ? `<span>${ICON_CLOCK}${esc(e.ExamTime)}</span>` : ""}
+              ${e.AuditoryName ? `<span>${ICON_PIN}${esc(e.AuditoryName)}</span>` : ""}
+              ${e.GroupName && mode() !== "group" ? `<span>${ICON_GROUP}${esc(e.GroupName)}</span>` : ""}
+              ${teacher && mode() !== "teacher" ? `<span>${ICON_USER}${esc(teacher)}</span>` : ""}
+            </div>
+            ${left ? `<div class="left">${left}</div>` : ""}
+            ${consult}
+          </div>
+        </article>`;
+      })
+      .join("");
+  }
+
   // ================= отрисовка =================
   function render() {
     if (!state.date) state.date = defaultDate();
-    $("groupName").textContent = settings.groupName || "Группа";
+    const prefix = { group: "", teacher: "", room: "Ауд. " }[mode()];
+    $("groupName").textContent = settings.targetName ? prefix + settings.targetName : "Выбрать";
+    $("classesBox").hidden = state.section !== "classes";
+    $("examsBox").hidden = state.section === "classes";
+    $("bottomBar").hidden = state.section !== "classes";
+    document.querySelectorAll("#sectionSeg button").forEach((b) => b.classList.toggle("active", b.dataset.sec === state.section));
     renderHero();
-    renderStrip();
-    renderContent();
+    if (state.section === "classes") {
+      renderStrip();
+      renderContent();
+    } else renderExams();
     renderFooter();
   }
 
   function renderHero() {
     const d = state.date;
     const isToday = C.sameDay(d, new Date());
-    if (state.view === "week") {
+    if (state.section !== "classes") {
+      $("dayLabel").textContent = state.section === "laz" ? "График ЛАЗ" : "Сессия";
+      $("dayTitle").textContent = state.section === "laz" ? "Лабораторные занятия" : "Зачёты и экзамены";
+    } else if (state.view === "week") {
       const mon = C.mondayOf(d);
       const sat = C.addDays(mon, 5);
       const thisWeek = C.sameDay(mon, C.mondayOf(new Date()));
@@ -204,34 +311,33 @@
     }
     const wt = C.weekType(d, settings.weekFlip);
     $("weekBadge").textContent = wt === "top" ? "Верхняя неделя" : "Нижняя неделя";
+    $("weekBadge").hidden = state.section !== "classes";
     $("todayBtn").textContent = state.view === "week" ? "Эта неделя" : isToday ? "Сегодня" : "К сегодня";
 
-    // карточка «сейчас»
+    // карточка «сейчас» — всегда про сегодняшний день
     const card = $("nowCard");
     const today = C.startOfDay(new Date());
     const list = state.data ? lessonsOn(today) : [];
     const st = C.dayStatus(list);
-    const showFor = state.view === "day" ? isToday : C.sameDay(C.mondayOf(d), C.mondayOf(today));
+    const showFor = state.section !== "classes" || (state.view === "day" ? isToday : C.sameDay(C.mondayOf(d), C.mondayOf(today)));
     card.hidden = true;
     card.classList.remove("calm");
     $("nowBar").hidden = true;
     if (!state.data) return;
 
     if (showFor && st.state === "during") {
-      const l = st.current.lessons[0];
       card.hidden = false;
       $("nowTitle").textContent = `Сейчас ${st.current.n}-я пара`;
       $("nowTime").textContent = `ещё ${C.fmtDuration(st.minutes)}`;
-      $("nowSub").textContent = `${l.subject}${l.room ? " · " + l.room : ""}`;
+      $("nowSub").textContent = lessonLine(st.current.lessons[0]);
       $("nowBar").hidden = false;
       $("nowBar").firstElementChild.style.width = `${Math.round(st.progress * 100)}%`;
     } else if (showFor && (st.state === "before" || st.state === "break")) {
-      const l = st.next.lessons[0];
       card.hidden = false;
       $("nowTitle").textContent = st.state === "before" ? `Первая пара в ${st.next.start}` : `Перемена · дальше ${st.next.n}-я пара`;
       $("nowTime").textContent = `через ${C.fmtDuration(st.minutes)}`;
-      $("nowSub").textContent = `${l.subject}${l.room ? " · " + l.room : ""}`;
-    } else if (state.view === "day" && state.autoAdvanced && C.sameDay(d, defaultDate())) {
+      $("nowSub").textContent = lessonLine(st.next.lessons[0]);
+    } else if (state.section === "classes" && state.view === "day" && state.autoAdvanced && C.sameDay(d, defaultDate())) {
       card.hidden = false;
       card.classList.add("calm");
       const todayIsSunday = C.weekdayIndex(today) === 7;
@@ -257,18 +363,15 @@
     $("weekStrip").innerHTML = html;
   }
 
-  function plural(n, one, few, many) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-    return many;
-  }
-
   function lessonHtml(l) {
     const t = C.TYPES[l.type];
+    const meta = [];
+    if (l.teacher && mode() !== "teacher") meta.push(`<span>${ICON_USER}${esc(l.teacher)}</span>`);
+    if (l.group && mode() !== "group") meta.push(`<span>${ICON_GROUP}${esc(l.group)}</span>`);
+    if (l.room && mode() !== "room") meta.push(`<span>${ICON_PIN}${esc(l.room)}</span>`);
     return `<div class="lesson">
-      <div class="lesson-head"><div class="subject">${esc(l.subject)}</div>${t ? `<span class="tag ${t.cls}">${t.label}</span>` : ""}</div>
-      <div class="meta">${l.teacher ? `<span>${ICON_USER}${esc(l.teacher)}</span>` : ""}${l.room ? `<span>${ICON_PIN}${esc(l.room)}</span>` : ""}</div>
+      <div class="lesson-head"><div class="subject">${esc(l.subject)}${l.sub ? `<span class="sub-tag">${esc(l.sub)} подгр.</span>` : ""}</div>${t ? `<span class="tag ${t.cls}">${t.label}</span>` : ""}</div>
+      <div class="meta">${meta.join("")}</div>
     </div>`;
   }
 
@@ -293,7 +396,8 @@
     }
     const list = lessonsOn(d);
     if (!list.length) {
-      return `<div class="empty"><div class="big">🎉</div><h3>Пар нет</h3><p>${esc(relLabel(d))} свободный день</p></div>`;
+      const free = mode() === "room" ? "Аудитория свободна весь день" : `${relLabel(d)} свободный день`;
+      return `<div class="empty"><div class="big">🎉</div><h3>Пар нет</h3><p>${esc(free)}</p></div>`;
     }
     const isToday = C.sameDay(d, new Date());
     const t = C.nowMin();
@@ -302,7 +406,7 @@
     for (const p of list) {
       if (prev && prev.end && p.start) {
         const gap = C.toMin(p.start) - C.toMin(prev.end);
-        if (p.n - prev.n > 1) html += `<div class="gap">Окно · ${C.fmtDuration(gap)}</div>`;
+        if (p.n - prev.n > 1) html += `<div class="gap">${mode() === "room" ? "Свободно" : "Окно"} · ${C.fmtDuration(gap)}</div>`;
         else if (gap >= 20) html += `<div class="gap">Большая перемена · ${gap} мин</div>`;
       }
       let cls = "pair";
@@ -339,14 +443,15 @@
             ? list
                 .map((p) =>
                   p.lessons
-                    .map(
-                      (l, k) => `<div class="wk-row"><span class="n">${k ? "" : p.n}</span><span class="t">${k ? "" : p.start || ""}</span>
-                  <span class="s">${esc(l.subject)}<small>${esc([C.TYPES[l.type]?.label, l.teacher].filter(Boolean).join(" · "))}</small></span><span class="r">${esc(l.room)}</span></div>`,
-                    )
+                    .map((l, k) => {
+                      const info = mode() === "teacher" ? [C.TYPES[l.type]?.label, l.group] : mode() === "room" ? [C.TYPES[l.type]?.label, l.group, l.teacher] : [C.TYPES[l.type]?.label, l.teacher];
+                      return `<div class="wk-row"><span class="n">${k ? "" : p.n}</span><span class="t">${k ? "" : p.start || ""}</span>
+                  <span class="s">${esc(l.subject)}${l.sub ? ` <span class="sub-tag">${esc(l.sub)}</span>` : ""}<small>${esc(info.filter(Boolean).join(" · "))}</small></span><span class="r">${esc(mode() === "room" ? "" : l.room)}</span></div>`;
+                    })
                     .join(""),
                 )
                 .join("")
-            : `<div class="wk-free">Пар нет</div>`
+            : `<div class="wk-free">${mode() === "room" ? "Свободна" : "Пар нет"}</div>`
         }
       </section>`;
     }
@@ -355,6 +460,11 @@
 
   function renderFooter() {
     const el = $("syncInfo");
+    if (state.section !== "classes") {
+      const ex = state.exams[state.section === "laz" ? 1 : 0];
+      el.textContent = ex && ex.at ? `Сверено с сайтом ОшТУ ${ago(ex.at)}` : "";
+      return;
+    }
     if (!state.data) {
       el.textContent = "";
       return;
@@ -363,15 +473,67 @@
     el.textContent = `Сверено с сайтом ОшТУ ${ago(state.data.checked_at)}${src}`;
   }
 
-  function renderError(e) {
+  function renderError() {
     $("content").innerHTML = `<div class="empty"><div class="big">📡</div><h3>Не удалось загрузить</h3>
       <p>${navigator.onLine ? "Сервер временно недоступен." : "Нет подключения к интернету."} Как только связь появится, расписание загрузится и сохранится на телефоне.</p>
       <button class="btn btn-primary" id="retryBtn">Повторить</button></div>`;
     $("retryBtn").onclick = () => sync({ force: true });
   }
 
+  // ================= напоминания (в браузере — пока сайт открыт; в приложениях — нативно) =================
+  const NOTIFIED_KEY = "oshtu.notified";
+
+  async function ensureNotifyPermission() {
+    if (inApp()) {
+      try { androidBridge() && androidBridge().requestNotifications && androidBridge().requestNotifications(); } catch {}
+      return true;
+    }
+    if (!("Notification" in window)) return false;
+    if (Notification.permission === "granted") return true;
+    if (Notification.permission === "denied") return false;
+    return (await Notification.requestPermission()) === "granted";
+  }
+
+  async function showReminder(title, body) {
+    C.playChime();
+    toast(`🔔 ${title}`, 6000);
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const opts = { body, icon: "icon-192.png", badge: "icon-192.png", tag: "oshtu-reminder", renotify: true, vibrate: [120, 60, 120] };
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg) return reg.showNotification(title, opts);
+      new Notification(title, opts);
+    } catch {}
+  }
+
+  function checkReminders() {
+    const min = Number(settings.notify || 0);
+    if (!min || !state.data || inApp()) return;
+    const now = Date.now();
+    const done = C.store.get(NOTIFIED_KEY, {}) || {};
+    for (const { at, pair } of C.upcomingStarts(state.data, settings.weekFlip, new Date(now - 60e3), 2)) {
+      const fireAt = at.getTime() - min * 60e3;
+      const key = `${mode()}:${settings.targetId}:${at.getTime()}`;
+      if (now >= fireAt && now < at.getTime() && !done[key]) {
+        done[key] = now;
+        const l = pair.lessons[0];
+        showReminder(`Через ${Math.max(1, Math.round((at.getTime() - now) / 60e3))} мин — ${pair.n}-я пара (${pair.start})`, lessonLine(l));
+      }
+    }
+    for (const k of Object.keys(done)) if (now - done[k] > 2 * 864e5) delete done[k];
+    C.store.set(NOTIFIED_KEY, done);
+  }
+
+  function notifyHintText() {
+    if (androidBridge()) return "Напоминание со своей мелодией придёт, даже если приложение закрыто.";
+    if (iosBridge()) return "Напоминание со своей мелодией придёт, даже если приложение закрыто. Разреши уведомления, когда iPhone спросит.";
+    if (/android/i.test(navigator.userAgent)) return "В браузере напоминания работают, пока сайт открыт. Чтобы они приходили всегда — установи Android-приложение (ниже).";
+    return "В браузере напоминания работают, пока сайт открыт.";
+  }
+
   // ================= навигация =================
   function go(delta) {
+    if (state.section !== "classes") return;
     if (state.view === "week") {
       state.date = C.addDays(state.date, delta * 7);
     } else {
@@ -395,12 +557,17 @@
 
   function setView(v) {
     state.view = v;
-    document.querySelectorAll(".main > .seg button").forEach((b) => b.classList.toggle("active", b.dataset.view === v));
+    document.querySelectorAll("#viewSeg button").forEach((b) => b.classList.toggle("active", b.dataset.view === v));
     render();
     renderContent("slide-l");
   }
 
-  // свайпы
+  function setSection(sec) {
+    state.section = sec;
+    render();
+    if (sec !== "classes") loadExams(sec === "laz" ? 1 : 0);
+  }
+
   function bindSwipe(el) {
     let x0 = null, y0 = null, t0 = 0;
     el.addEventListener("touchstart", (e) => {
@@ -417,7 +584,7 @@
     }, { passive: true });
   }
 
-  // ================= первый запуск =================
+  // ================= первый запуск: выбор группы / преподавателя / аудитории =================
   async function cachedRpc(name, body, key) {
     try {
       const r = await C.rpc(name, body);
@@ -430,25 +597,39 @@
     }
   }
 
+  function fillSelect(sel, items, placeholder, selected) {
+    sel.innerHTML = `<option value="">${esc(placeholder)}</option>` + items.map((i) => `<option value="${i.id}">${esc(i.name)}</option>`).join("");
+    sel.disabled = false;
+    if (selected && items.some((i) => String(i.id) === String(selected))) sel.value = String(selected);
+  }
+
   async function showSetup(cancelable) {
     $("main").hidden = true;
     $("setup").hidden = false;
     $("setupCancel").hidden = !cancelable;
     $("setupError").hidden = true;
-    const fSem = $("fSemester"), fFac = $("fFaculty"), fCourse = $("fCourse"), fGroup = $("fGroup"), save = $("setupSave");
+    const save = $("setupSave");
+    const fSem = $("fSemester");
+    let setupMode = mode();
 
     const autoName = C.autoSemester() === 2 ? "Осенний" : "Весенний";
     fSem.innerHTML = `<option value="auto">Авто (сейчас ${autoName})</option><option value="2">Осенний</option><option value="1">Весенний</option>`;
     fSem.value = settings.semester ? String(settings.semester) : "auto";
-    if (settings.course) fCourse.value = String(settings.course);
 
     const showErr = (msg) => {
       $("setupError").textContent = msg;
       $("setupError").hidden = false;
     };
+    const hideErr = () => ($("setupError").hidden = true);
 
-    const validate = () => (save.disabled = !(fFac.value && fCourse.value && fGroup.value));
+    const validate = () => {
+      const v = { group: $("fGroup").value, teacher: $("fTeacher").value, room: $("fRoom").value }[setupMode];
+      save.disabled = !v;
+    };
 
+    // ----- студент -----
+    const fFac = $("fFaculty"), fCourse = $("fCourse"), fGroup = $("fGroup");
+    if (settings.course) fCourse.value = String(settings.course);
     async function loadGroups() {
       validate();
       if (!fFac.value || !fCourse.value) {
@@ -460,48 +641,136 @@
       fGroup.innerHTML = `<option value="">Загрузка…</option>`;
       try {
         const groups = await cachedRpc("oshtu_groups", { p_faculty: +fFac.value, p_course: +fCourse.value }, `oshtu.meta.groups.${fFac.value}.${fCourse.value}`);
-        groups.sort((a, b) => a.GroupName.localeCompare(b.GroupName, "ru"));
-        fGroup.innerHTML =
-          `<option value="">Выбери группу</option>` + groups.map((g) => `<option value="${g.ID}">${esc(g.GroupName)}</option>`).join("");
-        fGroup.disabled = false;
-        if (settings.groupId && groups.some((g) => g.ID === settings.groupId)) fGroup.value = String(settings.groupId);
-        $("setupError").hidden = true;
-      } catch (e) {
+        const items = groups.map((g) => ({ id: g.ID, name: g.GroupName })).sort((a, b) => a.name.localeCompare(b.name, "ru"));
+        fillSelect(fGroup, items, "Выбери группу", mode() === "group" ? settings.targetId : null);
+        hideErr();
+      } catch {
         fGroup.innerHTML = `<option value="">Ошибка загрузки</option>`;
         showErr("Не удалось загрузить список групп. Проверь интернет и попробуй ещё раз.");
       }
       validate();
     }
-
     fFac.onchange = loadGroups;
     fCourse.onchange = loadGroups;
     fGroup.onchange = validate;
 
-    try {
-      const facs = await cachedRpc("oshtu_faculties", {}, "oshtu.meta.faculties");
-      fFac.innerHTML =
-        `<option value="">Выбери факультет</option>` +
-        facs.map((f) => `<option value="${f.ID}">${esc(String(f.DepartmentName).trim())}</option>`).join("");
-      if (settings.facultyId) fFac.value = String(settings.facultyId);
-    } catch (e) {
-      fFac.innerHTML = `<option value="">Ошибка загрузки</option>`;
-      showErr("Нет связи с сервером. Подключись к интернету для первой настройки.");
+    // ----- преподаватель -----
+    const fDept = $("fDept"), fTeacher = $("fTeacher"), fSearch = $("fTeacherSearch");
+    let teachers = [];
+    function drawTeachers() {
+      const q = fSearch.value.trim().toLowerCase();
+      const list = q ? teachers.filter((t) => t.name.toLowerCase().includes(q)) : teachers;
+      const keep = fTeacher.value || (mode() === "teacher" ? settings.targetId : null);
+      fillSelect(fTeacher, list, list.length ? `Выбери преподавателя (${list.length})` : "Никого не найдено", keep);
+      if (q && list.length === 1) fTeacher.value = String(list[0].id);
+      validate();
     }
-    if (fFac.value && fCourse.value) loadGroups();
+    async function loadTeachers() {
+      validate();
+      teachers = [];
+      fTeacher.disabled = true;
+      fSearch.disabled = true;
+      if (!fDept.value) {
+        fTeacher.innerHTML = `<option value="">Сначала подразделение</option>`;
+        return;
+      }
+      fTeacher.innerHTML = `<option value="">Загрузка…</option>`;
+      try {
+        const list = await cachedRpc("oshtu_teachers", { p_department: +fDept.value }, `oshtu.meta.teachers.${fDept.value}`);
+        teachers = list.map((t) => ({ id: t.ID, name: t.EmployeeFIO })).sort((a, b) => a.name.localeCompare(b.name, "ru"));
+        fSearch.disabled = false;
+        drawTeachers();
+        hideErr();
+      } catch {
+        fTeacher.innerHTML = `<option value="">Ошибка загрузки</option>`;
+        showErr("Не удалось загрузить список преподавателей. Проверь интернет.");
+      }
+    }
+    fDept.onchange = () => { fSearch.value = ""; loadTeachers(); };
+    fSearch.oninput = drawTeachers;
+    fTeacher.onchange = validate;
+
+    // ----- аудитория -----
+    const fBuilding = $("fBuilding"), fRoom = $("fRoom");
+    async function loadRooms() {
+      validate();
+      fRoom.disabled = true;
+      if (!fBuilding.value) {
+        fRoom.innerHTML = `<option value="">Сначала корпус</option>`;
+        return;
+      }
+      fRoom.innerHTML = `<option value="">Загрузка…</option>`;
+      try {
+        const list = await cachedRpc("oshtu_rooms", { p_building: +fBuilding.value }, `oshtu.meta.rooms.${fBuilding.value}`);
+        const items = list.map((r) => ({ id: r.ID, name: r.AuditoryName })).sort((a, b) => a.name.localeCompare(b.name, "ru", { numeric: true }));
+        fillSelect(fRoom, items, "Выбери аудиторию", mode() === "room" ? settings.targetId : null);
+        hideErr();
+      } catch {
+        fRoom.innerHTML = `<option value="">Ошибка загрузки</option>`;
+        showErr("Не удалось загрузить список аудиторий. Проверь интернет.");
+      }
+      validate();
+    }
+    fBuilding.onchange = loadRooms;
+    fRoom.onchange = validate;
+
+    // ----- переключение режима -----
+    const loaded = {};
+    async function switchMode(m) {
+      setupMode = m;
+      document.querySelectorAll("#modeSeg button").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
+      $("paneGroup").hidden = m !== "group";
+      $("paneTeacher").hidden = m !== "teacher";
+      $("paneRoom").hidden = m !== "room";
+      hideErr();
+      validate();
+      if (loaded[m]) return;
+      loaded[m] = true;
+      try {
+        if (m === "group") {
+          const facs = await cachedRpc("oshtu_faculties", {}, "oshtu.meta.faculties");
+          fillSelect(fFac, facs.map((f) => ({ id: f.ID, name: String(f.DepartmentName).trim() })), "Выбери факультет", settings.facultyId);
+          if (fFac.value && fCourse.value) loadGroups();
+        } else if (m === "teacher") {
+          const deps = await cachedRpc("oshtu_departments", {}, "oshtu.meta.departments");
+          fillSelect(fDept, deps.map((d) => ({ id: d.ID, name: String(d.DepartmentName).trim() })), "Выбери подразделение", settings.departmentId);
+          if (fDept.value) loadTeachers();
+        } else {
+          const b = await cachedRpc("oshtu_buildings", {}, "oshtu.meta.buildings");
+          fillSelect(fBuilding, b.map((x) => ({ id: x.ID, name: /^\d+$/.test(x.BuildingName) ? `Корпус ${x.BuildingName}` : x.BuildingName })), "Выбери корпус", settings.buildingId);
+          if (fBuilding.value) loadRooms();
+        }
+      } catch {
+        loaded[m] = false;
+        showErr("Нет связи с сервером. Подключись к интернету для первой настройки.");
+      }
+    }
+    document.querySelectorAll("#modeSeg button").forEach((b) => (b.onclick = () => switchMode(b.dataset.mode)));
+    switchMode(setupMode);
 
     save.onclick = () => {
-      const changed = settings.groupId !== +fGroup.value || String(settings.semester || "auto") !== fSem.value;
-      settings = {
-        ...settings,
-        semester: fSem.value,
-        facultyId: +fFac.value,
-        facultyName: fFac.options[fFac.selectedIndex].text,
-        course: +fCourse.value,
-        groupId: +fGroup.value,
-        groupName: fGroup.options[fGroup.selectedIndex].text,
-      };
+      const selText = (sel) => sel.options[sel.selectedIndex].text;
+      let target;
+      if (setupMode === "group") {
+        target = { targetId: +fGroup.value, targetName: selText(fGroup), facultyId: +fFac.value, facultyName: selText(fFac), course: +fCourse.value };
+      } else if (setupMode === "teacher") {
+        const full = selText(fTeacher);
+        const parts = full.split(/\s+/);
+        const short = parts.length >= 3 ? `${parts[0]} ${parts[1][0]}.${parts[2][0]}.` : full;
+        target = { targetId: +fTeacher.value, targetName: short, targetFull: full, departmentId: +fDept.value, departmentName: selText(fDept) };
+      } else {
+        const bName = fBuilding.options[fBuilding.selectedIndex].text.replace(/^Корпус\s+/, "");
+        target = { targetId: +fRoom.value, targetName: `${bName}/${selText(fRoom)}`, buildingId: +fBuilding.value, buildingName: bName };
+      }
+      const changed = mode() !== setupMode || settings.targetId !== target.targetId || String(settings.semester || "auto") !== fSem.value;
+      settings = { ...settings, ...target, mode: setupMode, semester: fSem.value };
+      delete settings.groupId;
+      delete settings.groupName;
       saveSettings();
-      if (changed) state.data = null;
+      if (changed) {
+        state.data = null;
+        state.exams = { 0: null, 1: null };
+      }
       startMain();
     };
     $("setupCancel").onclick = startMain;
@@ -510,12 +779,16 @@
   // ================= настройки =================
   function openSettings() {
     const dlg = $("settings");
-    $("sGroup").textContent = settings.groupName || "—";
-    $("sFaculty").textContent = [settings.course ? settings.course + " курс" : "", settings.facultyName].filter(Boolean).join(" · ");
-    const curType = C.weekType(new Date(), settings.weekFlip);
-    setSeg("sWeek", curType);
+    $("sGroup").textContent = (mode() === "teacher" ? settings.targetFull : mode() === "room" ? `Аудитория ${settings.targetName}` : settings.targetName) || "—";
+    $("sFaculty").textContent =
+      mode() === "group"
+        ? [settings.course ? settings.course + " курс" : "", settings.facultyName].filter(Boolean).join(" · ")
+        : mode() === "teacher" ? `Преподаватель · ${settings.departmentName || ""}` : `Корпус ${settings.buildingName || ""}`;
+    setSeg("sWeek", C.weekType(new Date(), settings.weekFlip));
     setSeg("sSemester", settings.semester ? String(settings.semester) : "auto");
     setSeg("sTheme", settings.theme || "auto");
+    setSeg("sNotify", String(settings.notify || 0));
+    $("notifyHint").textContent = notifyHintText();
     $("widgetUrl").value = widgetUrl();
     $("widgetOpen").href = widgetUrl();
     $("sInstall").hidden = !deferredPrompt || inApp();
@@ -524,7 +797,7 @@
     $("appWidgetHint").hidden = !inApp();
     if (iosBridge()) {
       $("appWidgetHint").innerHTML =
-        "Долгое нажатие на пустом месте экрана → <b>Править</b> → <b>Добавить виджет</b> → найди «Расписание для студентов ОшТУ». На экране блокировки тоже можно. ‹ › в виджете — другой день (iOS 17+).";
+        "Долгое нажатие на пустом месте экрана → <b>Править</b> → <b>Добавить виджет</b> → найди «Расписание ОшТУ». На экране блокировки тоже можно. ‹ › в виджете — другой день (iOS 17+).";
     }
     $("iosHint").hidden = !(/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone());
     if (dlg.showModal) dlg.showModal();
@@ -537,7 +810,7 @@
 
   function widgetUrl() {
     const base = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "");
-    const p = new URLSearchParams({ g: settings.groupId, n: settings.groupName || "" });
+    const p = new URLSearchParams({ k: mode(), g: settings.targetId, n: settings.targetName || "" });
     if (settings.semester && settings.semester !== "auto") p.set("s", settings.semester);
     if (settings.weekFlip) p.set("f", "1");
     return `${base}widget.html?${p}`;
@@ -558,11 +831,29 @@
       dlg.close();
       showSetup(true);
     };
+    $("sNotify").onclick = async (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      const v = Number(b.dataset.v);
+      if (v > 0) {
+        const ok = await ensureNotifyPermission();
+        if (!ok && !inApp()) toast("Разреши уведомления для сайта в настройках браузера — пока буду напоминать звуком на странице", 4000);
+        C.playChime();
+      }
+      settings.notify = v;
+      saveSettings();
+      setSeg("sNotify", String(v));
+      toast(v ? `Напомню за ${v} мин до начала пары` : "Напоминания выключены");
+    };
+    $("sTestSound").onclick = () => {
+      if (androidBridge() && androidBridge().testReminder) androidBridge().testReminder();
+      else if (iosBridge()) iosBridge().postMessage(JSON.stringify({ action: "testReminder" }));
+      else C.playChime();
+    };
     $("sWeek").onclick = (e) => {
       const b = e.target.closest("button");
       if (!b) return;
-      const natural = C.weekType(new Date(), false);
-      settings.weekFlip = b.dataset.v !== natural;
+      settings.weekFlip = b.dataset.v !== C.weekType(new Date(), false);
       saveSettings();
       setSeg("sWeek", b.dataset.v);
       $("widgetUrl").value = widgetUrl();
@@ -575,6 +866,7 @@
       saveSettings();
       setSeg("sSemester", b.dataset.v);
       state.data = null;
+      state.exams = { 0: null, 1: null };
       loadCached();
       render();
       sync({ force: true, silent: true });
@@ -590,12 +882,11 @@
     $("widgetCopy").onclick = async () => {
       try {
         await navigator.clipboard.writeText($("widgetUrl").value);
-        toast("Ссылка скопирована");
       } catch {
         $("widgetUrl").select();
         document.execCommand("copy");
-        toast("Ссылка скопирована");
       }
+      toast("Ссылка скопирована");
     };
     $("sRefresh").onclick = () => {
       dlg.close();
@@ -636,7 +927,7 @@
     $("main").hidden = false;
     if (deferredPrompt && !C.store.get("oshtu.installDismissed") && !inApp()) $("installBanner").hidden = false;
     if (!state.data) loadCached();
-    pushToAndroid();
+    pushToNative();
     const wantApk = (/android/i.test(navigator.userAgent) || isIOS()) && !inApp() && !C.store.get("oshtu.apkDismissed");
     $("apkBanner").hidden = !wantApk;
     if (wantApk) $("installBanner").hidden = true;
@@ -650,13 +941,14 @@
 
     const p = new URLSearchParams(location.search);
     if (p.get("view") === "week") state.view = "week";
+    if (p.get("sec") === "exams" || p.get("sec") === "laz") state.section = p.get("sec");
     if (p.get("d") === "tomorrow") {
       let d = C.addDays(new Date(), 1);
       if (C.weekdayIndex(d) === 7) d = C.addDays(d, 1);
       state.date = d;
       state.autoAdvanced = false;
     }
-    document.querySelectorAll(".main > .seg button").forEach((b) => b.classList.toggle("active", b.dataset.view === state.view));
+    document.querySelectorAll("#viewSeg button").forEach((b) => b.classList.toggle("active", b.dataset.view === state.view));
     render();
     sync();
   }
@@ -677,7 +969,8 @@
       $("installBanner").hidden = true;
       C.store.set("oshtu.installDismissed", true);
     };
-    document.querySelectorAll(".main > .seg button").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
+    document.querySelectorAll("#viewSeg button").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
+    document.querySelectorAll("#sectionSeg button").forEach((b) => (b.onclick = () => setSection(b.dataset.sec)));
     $("weekStrip").addEventListener("click", (e) => {
       const b = e.target.closest(".wd");
       if (!b) return;
@@ -703,7 +996,6 @@
     });
     bindSettings();
 
-    // актуальность: при возвращении в приложение, при появлении сети и каждые 2 минуты
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState !== "visible" || $("main").hidden) return;
       const wasDefault = state.view === "day" && state.date && C.sameDay(state.date, defaultDate());
@@ -714,18 +1006,20 @@
     window.addEventListener("online", () => !$("main").hidden && sync());
     window.addEventListener("offline", () => setSync("off"));
     setInterval(() => {
-      if (document.visibilityState !== "visible" || $("main").hidden) return;
+      if ($("main").hidden) return;
+      checkReminders();
+      if (document.visibilityState !== "visible") return;
       renderHero();
-      if (state.view === "day") renderContent();
+      if (state.section === "classes" && state.view === "day") renderContent();
       renderFooter();
       if (Date.now() - state.lastAttempt > 120e3) sync();
-    }, 30e3);
+    }, 20e3);
   }
 
   function init() {
     applyTheme();
     bind();
-    if (settings.groupId) startMain();
+    if (settings.targetId) startMain();
     else showSetup(false);
 
     if ("serviceWorker" in navigator && location.protocol !== "file:") {

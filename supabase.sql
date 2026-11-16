@@ -200,3 +200,14 @@ returns jsonb language sql stable security definer set search_path = '' as $$
 $$;
 -- refresh() вызывает store_week() после успешной загрузки, а oshtu_schedule()/refresh()
 -- добавляют в ответ поле "weeks": oshtu_private.weeks_json(group, semester).
+
+-- ===== 1.2: все режимы (group / teacher / room), экзамены и ЛАЗ =====
+-- Таблицы oshtu_schedules и oshtu_schedule_weeks получили колонку kind ('group','teacher','room'),
+-- первичные ключи (kind, group_id, semester_id[, week_start]); group_id = ID цели.
+-- Публичные RPC:
+--   oshtu_timetable(p_kind, p_id, p_semester, p_name, p_max_age_sec)  — расписание занятий любой цели
+--   oshtu_schedule(p_group, ...)                                     — старый вызов = oshtu_timetable('group', ...)
+--   oshtu_departments(), oshtu_teachers(p_department)                 — подразделения и преподаватели
+--   oshtu_buildings(), oshtu_rooms(p_building)                        — корпуса и аудитории
+--   oshtu_exams(p_kind, p_id, p_semester, p_type)                     — p_type 0: зачёты/экзамены, 1: ЛАЗ (кэш 20 мин)
+-- Полный текст — миграция oshtu_all_kinds в проекте Supabase.

@@ -50,7 +50,8 @@
   function apiBases() {
     const { SUPABASE_URL } = window.APP_CONFIG;
     const local = !/^https?:$/.test(location.protocol) || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
-    const bases = local ? [SUPABASE_URL] : [`${location.origin}/sb`, SUPABASE_URL];
+    const PROXY = "https://oshtu-schedule.onrender.com/sb";
+    const bases = local ? [SUPABASE_URL, PROXY] : [`${location.origin}/sb`, SUPABASE_URL];
     const pref = rpc.preferred;
     return pref && bases.includes(pref) ? [pref, ...bases.filter((b) => b !== pref)] : bases;
   }
@@ -101,7 +102,19 @@
     s.replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
       .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
-  function parseBlock(html) {
+  // Формат ячейки зависит от того, чьё расписание смотрим:
+  //   group:   «(1) Предмет (лк.)» / «Преподаватель [корпус/ауд]»
+  //   teacher: «(1) ПИ-1-24 (лк.)  [3/303]» / «Предмет»
+  //   room:    «(1) Предмет (лк.)» / «ПИ-1-24 Преподаватель»
+  const HEAD_RE = /^(.*?)\s*\((лк|пр|лб|лаб|сем)[^)]*\)\s*(?:\[([^\]]+)\])?\s*$/i;
+  const ROOM_RE = /^(.*?)\s*\[([^\]]+)\]\s*$/;
+
+  function splitSub(s) {
+    const m = s.match(/^\((\d+)\)\s*(.*)$/);
+    return m ? [m[1], m[2].trim()] : ["", s.trim()];
+  }
+
+  function parseBlock(html, kind = "group") {
     const lines = html
       .split(/<br\s*\/?>/i)
       .map((s) => decode(s.replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim())
@@ -109,48 +122,62 @@
     const out = [];
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const m = line.match(/^(.*?)\s*\((лк|пр|лб|лаб|сем)[^)]*\)\s*$/i);
+      const m = line.match(HEAD_RE);
       if (m) {
-        const lesson = { subject: m[1].trim(), type: m[2].toLowerCase().slice(0, 2), teacher: "", room: "" };
-        const next = lines[i + 1];
-        if (next && !TYPE_RE.test(next)) {
-          const r = next.match(/^(.*?)\s*\[([^\]]+)\]\s*$/);
-          lesson.teacher = r ? r[1].trim() : next;
-          lesson.room = r ? r[2].trim() : "";
-          i++;
+        const [sub, head] = splitSub(m[1]);
+        const l = { subject: "", type: m[2].toLowerCase().slice(0, 2), teacher: "", room: (m[3] || "").trim(), group: "", sub };
+        const next = lines[i + 1] && !TYPE_RE.test(lines[i + 1]) ? lines[i + 1] : null;
+        if (kind === "teacher") {
+          l.group = head;
+          if (next) { l.subject = next; i++; }
+        } else if (kind === "room") {
+          l.subject = head;
+          if (next) {
+            const g = next.match(/^(\S*\d\S*)\s+(.+)$/);
+            if (g) { l.group = g[1]; l.teacher = g[2]; } else l.teacher = next;
+            i++;
+          }
+        } else {
+          l.subject = head;
+          if (next) {
+            const r = next.match(ROOM_RE);
+            if (r) { l.teacher = r[1].trim(); l.room = r[2].trim(); } else l.teacher = next;
+            i++;
+          }
         }
-        out.push(lesson);
+        if (!l.subject) l.subject = l.group || "Занятие";
+        out.push(l);
       } else {
-        const r = line.match(/^(.*?)\s*\[([^\]]+)\]\s*$/);
+        const r = line.match(ROOM_RE);
         const last = out[out.length - 1];
         if (r && last && !last.teacher) {
           last.teacher = r[1].trim();
           last.room = r[2].trim();
-        } else out.push({ subject: line, type: "", teacher: "", room: "" });
+        } else out.push({ subject: line, type: "", teacher: "", room: "", group: "", sub: "" });
       }
     }
     return out;
   }
 
-  function parseCell(html) {
+  function parseCell(html, kind) {
     if (!html || !html.replace(/<[^>]+>|\s|&nbsp;/g, "")) return null;
     const parts = html.split(/<hr[^>]*>/i);
     if (parts.length === 1) {
-      const l = parseBlock(parts[0]);
+      const l = parseBlock(parts[0], kind);
       return l.length ? { top: l, bottom: l, split: false } : null;
     }
-    const top = parseBlock(parts[0]);
-    const bottom = parseBlock(parts.slice(1).join(""));
+    const top = parseBlock(parts[0], kind);
+    const bottom = parseBlock(parts.slice(1).join(""), kind);
     return top.length || bottom.length ? { top, bottom, split: true } : null;
   }
 
   // raw = ArrayData с сайта ОшТУ → { 1: [{n, top, bottom, split}], ... 6: [...] }
-  function parseSchedule(raw) {
+  function parseSchedule(raw, kind = "group") {
     const days = {};
     for (let d = 1; d <= 6; d++) days[d] = [];
     for (const row of raw || []) {
       for (let d = 1; d <= 6; d++) {
-        const cell = parseCell(row[`WeekDay${d}`] || "");
+        const cell = parseCell(row[`WeekDay${d}`] || "", kind);
         if (cell) days[d].push({ n: Number(row.PairNumber), ...cell });
       }
     }
@@ -259,11 +286,54 @@
     let pick = weeks.find((w) => w.week_start === key);
     if (!pick) pick = weeks.filter((w) => w.week_start < key).pop(); // будущие недели — последняя известная версия
     if (!pick) pick = weeks[0]; // давние прошлые — самая ранняя сохранённая
-    cache[key] = parseSchedule(pick ? pick.raw : data.raw);
+    cache[key] = parseSchedule(pick ? pick.raw : data.raw, data.kind || "group");
     return cache[key];
   }
 
+  // ---------- режимы ----------
+  const KINDS = {
+    group: { label: "Группа", short: "Группа", rpcList: "oshtu_groups" },
+    teacher: { label: "Преподаватель", short: "Преподаватель", rpcList: "oshtu_teachers" },
+    room: { label: "Аудитория", short: "Аудитория", rpcList: "oshtu_rooms" },
+  };
+
+  // ---------- напоминания: ближайшие начала пар ----------
+  function upcomingStarts(data, flip, from = new Date(), days = 7) {
+    const out = [];
+    for (let i = 0; i < days; i++) {
+      const d = addDays(from, i);
+      for (const p of dayLessons(daysFor(data, d), d, flip)) {
+        if (!p.start) continue;
+        const [h, m] = p.start.split(":").map(Number);
+        const at = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
+        if (at > from) out.push({ at, pair: p });
+      }
+    }
+    return out;
+  }
+
+  // ---------- даты экзаменов: «10.01.2027», «2027-01-10T00:00:00» ----------
+  function parseAnyDate(s) {
+    s = String(s || "").trim();
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+    m = s.match(/(\d{1,2})[./](\d{1,2})[./](\d{4})/);
+    if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+    return null;
+  }
+
+  // ---------- своя мелодия ----------
+  let chimeAudio = null;
+  function playChime() {
+    try {
+      if (!chimeAudio) chimeAudio = new Audio("oshtu_chime.wav");
+      chimeAudio.currentTime = 0;
+      return chimeAudio.play().catch(() => {});
+    } catch {}
+  }
+
   window.Core = {
+    KINDS, upcomingStarts, parseAnyDate, playChime,
     weekKey, daysFor,
     PAIR_TIMES, TYPES, store, rpc, parseSchedule, weekType, autoSemester,
     startOfDay, addDays, mondayOf, sameDay, weekdayIndex, toMin, nowMin, fmtDuration,

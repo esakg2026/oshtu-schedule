@@ -386,6 +386,59 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .wk-row .r { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .wk-free { color: var(--muted); font-size: 14px; padding: 2px 0; }
 
+/* разделы: занятия / экзамены / ЛАЗ */
+.sections { display: flex; gap: 8px; margin: 4px 0 12px; overflow-x: auto; scrollbar-width: none; }
+.sections::-webkit-scrollbar { display: none; }
+.sections button {
+  flex: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.sections button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.mode-seg { margin: 0 0 16px; }
+.mode-seg button { font-size: 13px; }
+.field .search {
+  width: 100%;
+  border: 1px solid transparent;
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.field .search:focus { outline: none; border-color: var(--accent); }
+
+.sub-tag { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: 2px; }
+
+/* экзамены и ЛАЗ */
+.exam {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 12px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 14px 14px 14px 10px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+.exam.past { opacity: 0.5; }
+.exam.soon { outline: 2px solid var(--accent); outline-offset: -2px; }
+.exam-date { text-align: center; border-radius: 14px; background: var(--surface-2); padding: 8px 0; align-self: start; }
+.exam.soon .exam-date { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
+.exam-date b { display: block; font-size: 22px; line-height: 1; font-weight: 800; }
+.exam-date span { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+.exam-date small { display: block; font-size: 11px; opacity: 0.8; }
+.exam .left { font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 6px; }
+.exam .consult { margin-top: 8px; font-size: 13px; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: 6px 9px; }
+
 .sync-info { text-align: center; color: var(--muted); font-size: 12px; padding: 10px 0 0; }
 
 /* нижняя панель */

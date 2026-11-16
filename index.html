@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Расписание для студентов ОшТУ</title>
+  <title>Расписание ОшТУ</title>
   <meta name="author" content="ESA — Эркебаев Самат Адылович" />
   <meta name="description" content="Расписание занятий ОшТУ: сегодня, завтра, неделя. Работает офлайн." />
   <meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)" />
@@ -29,33 +29,65 @@
   <section id="setup" class="setup" hidden>
     <div class="setup-card">
       <img src="icon.svg" alt="" class="setup-logo" width="64" height="64" />
-      <h1>Расписание для студентов ОшТУ</h1>
-      <p class="muted">Выбери свою группу один раз — дальше приложение само будет показывать пары на сегодня.</p>
+      <h1>Расписание ОшТУ</h1>
+      <p class="muted">Для студентов, преподавателей и всех, кому нужно расписание аудиторий. Выбери один раз — дальше приложение само покажет пары на сегодня.</p>
+
+      <div class="seg mode-seg" id="modeSeg">
+        <button data-mode="group" class="active">Студент</button>
+        <button data-mode="teacher">Преподаватель</button>
+        <button data-mode="room">Аудитория</button>
+      </div>
 
       <label class="field">
         <span>Семестр</span>
         <select id="fSemester"></select>
       </label>
-      <label class="field">
-        <span>Факультет / Институт</span>
-        <select id="fFaculty"><option value="">Загрузка…</option></select>
-      </label>
-      <label class="field">
-        <span>Курс</span>
-        <select id="fCourse">
-          <option value="">Выбери курс</option>
-          <option value="1">1 курс</option>
-          <option value="2">2 курс</option>
-          <option value="3">3 курс</option>
-          <option value="4">4 курс</option>
-          <option value="5">5 курс</option>
-          <option value="6">6 курс</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>Группа</span>
-        <select id="fGroup" disabled><option value="">Сначала факультет и курс</option></select>
-      </label>
+
+      <div id="paneGroup">
+        <label class="field">
+          <span>Факультет / Институт</span>
+          <select id="fFaculty"><option value="">Загрузка…</option></select>
+        </label>
+        <label class="field">
+          <span>Курс</span>
+          <select id="fCourse">
+            <option value="">Выбери курс</option>
+            <option value="1">1 курс</option>
+            <option value="2">2 курс</option>
+            <option value="3">3 курс</option>
+            <option value="4">4 курс</option>
+            <option value="5">5 курс</option>
+            <option value="6">6 курс</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Группа</span>
+          <select id="fGroup" disabled><option value="">Сначала факультет и курс</option></select>
+        </label>
+      </div>
+
+      <div id="paneTeacher" hidden>
+        <label class="field">
+          <span>Подразделение / Институт</span>
+          <select id="fDept"><option value="">Загрузка…</option></select>
+        </label>
+        <label class="field">
+          <span>Преподаватель</span>
+          <input id="fTeacherSearch" class="search" type="search" placeholder="Поиск по фамилии…" autocomplete="off" disabled />
+          <select id="fTeacher" disabled><option value="">Сначала подразделение</option></select>
+        </label>
+      </div>
+
+      <div id="paneRoom" hidden>
+        <label class="field">
+          <span>Корпус</span>
+          <select id="fBuilding"><option value="">Загрузка…</option></select>
+        </label>
+        <label class="field">
+          <span>Аудитория</span>
+          <select id="fRoom" disabled><option value="">Сначала корпус</option></select>
+        </label>
+      </div>
 
       <p id="setupError" class="error" hidden></p>
       <button id="setupSave" class="btn btn-primary btn-block" disabled>Готово</button>
@@ -115,18 +147,30 @@
       </div>
     </div>
 
-    <nav id="weekStrip" class="week-strip" aria-label="Дни недели"></nav>
-
-    <div class="seg" role="tablist">
-      <button role="tab" data-view="day" class="active">День</button>
-      <button role="tab" data-view="week">Неделя</button>
+    <div class="sections" id="sectionSeg" role="tablist">
+      <button role="tab" data-sec="classes" class="active">Занятия</button>
+      <button role="tab" data-sec="exams">Зачёты и экзамены</button>
+      <button role="tab" data-sec="laz">ЛАЗ</button>
     </div>
 
-    <main id="content" class="content" aria-live="polite"></main>
+    <div id="classesBox">
+      <nav id="weekStrip" class="week-strip" aria-label="Дни недели"></nav>
+
+      <div class="seg" id="viewSeg" role="tablist">
+        <button role="tab" data-view="day" class="active">День</button>
+        <button role="tab" data-view="week">Неделя</button>
+      </div>
+
+      <main id="content" class="content" aria-live="polite"></main>
+    </div>
+
+    <div id="examsBox" hidden>
+      <div id="examsList" class="content"></div>
+    </div>
 
     <footer id="syncInfo" class="sync-info"></footer>
 
-    <div class="bottom-bar">
+    <div class="bottom-bar" id="bottomBar">
       <button id="prevBtn" class="nav-btn" aria-label="Назад">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -153,6 +197,18 @@
         </div>
         <button id="sChange" class="btn btn-sm">Сменить</button>
       </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-label">🔔 Напоминание перед парой</div>
+      <div class="seg seg-sm" id="sNotify">
+        <button data-v="0">Выкл</button>
+        <button data-v="5">5 мин</button>
+        <button data-v="10">10 мин</button>
+        <button data-v="15">15 мин</button>
+      </div>
+      <button id="sTestSound" class="btn btn-block">▶︎ Послушать мелодию</button>
+      <div class="set-hint" id="notifyHint"></div>
     </div>
 
     <div class="set-group">
@@ -187,7 +243,7 @@
       <div id="apkBlock">
         <div class="set-hint" style="margin-top:0">
           <b>Android:</b> скачай приложение — в нём есть настоящий виджет «Пары сегодня» с кнопками ‹ ›.
-          После установки открой приложение, выбери группу, затем: долгое нажатие на пустом месте экрана → <b>Виджеты</b> → «Расписание для студентов ОшТУ».
+          После установки открой приложение, выбери группу (или преподавателя, аудиторию), затем: долгое нажатие на пустом месте экрана → <b>Виджеты</b> → «Расписание ОшТУ».
         </div>
         <a class="btn btn-primary btn-block" href="oshtu-schedule.apk" download style="display:block;text-align:center;text-decoration:none">Скачать приложение для Android (APK)</a>
         <div class="set-hint">Телефон спросит разрешение на установку из браузера — разреши для Chrome.</div>
@@ -199,7 +255,7 @@
         <a class="btn btn-primary btn-block" href="iphone.html" style="display:block;text-align:center;text-decoration:none">Настроить виджет для iPhone</a>
       </div>
       <div class="set-hint" id="appWidgetHint" hidden style="margin-top:0">
-        Долгое нажатие на пустом месте рабочего стола → <b>Виджеты</b> → найди «Расписание для студентов ОшТУ» → перетащи на экран.
+        Долгое нажатие на пустом месте рабочего стола → <b>Виджеты</b> → найди «Расписание ОшТУ» → перетащи на экран.
         В виджете: ‹ › — другой день, нажатие на заголовок — вернуться к сегодня, на строку «обновлено» — обновить.
       </div>
       <details style="margin-top:10px">
@@ -220,7 +276,7 @@
 
     <div class="set-group about">
       <div class="set-label">О приложении</div>
-      <div class="set-title" style="font-size:15px">Расписание для студентов ОшТУ</div>
+      <div class="set-title" style="font-size:15px">Расписание ОшТУ</div>
       <div class="set-sub">Разработчик: компания <b>ESA</b></div>
       <div class="set-sub">Владелец: Эркебаев Самат Адылович</div>
       <div class="set-hint">Неофициальное приложение. Расписание берётся с открытого раздела сайта portal.oshtu.kg и синхронизируется каждые 20 минут. Работает без интернета.</div>

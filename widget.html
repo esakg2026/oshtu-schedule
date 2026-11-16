@@ -53,15 +53,17 @@
       const C = window.Core;
       const p = new URLSearchParams(location.search);
       const saved = C.store.get("oshtu.settings", {}) || {};
-      const group = Number(p.get("g")) || saved.groupId;
-      const name = p.get("n") || saved.groupName || "";
+      const kind = ["group", "teacher", "room"].includes(p.get("k")) ? p.get("k") : p.get("g") ? "group" : saved.mode || "group";
+      const group = Number(p.get("g")) || saved.targetId || saved.groupId;
+      const name = p.get("n") || saved.targetName || saved.groupName || "";
       const semParam = p.get("s") || (saved.semester && saved.semester !== "auto" ? saved.semester : null);
       const semester = semParam ? Number(semParam) : C.autoSemester();
       const flip = p.has("f") ? p.get("f") === "1" : !!saved.weekFlip;
       if (p.get("theme")) document.documentElement.dataset.theme = p.get("theme");
-      const key = `oshtu.sched.${group}.${semester}`;
+      const key = `oshtu.tt.${kind}.${group}.${semester}`;
       const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
       let data = C.store.get(key);
+      if (data) data.kind = kind;
 
       function pickDay() {
         let d = C.startOfDay(new Date());
@@ -81,7 +83,7 @@
       function render() {
         document.getElementById("group").textContent = name;
         if (!group) {
-          document.getElementById("list").innerHTML = '<div class="msg">Открой приложение и выбери группу</div>';
+          document.getElementById("list").innerHTML = '<div class="msg">Открой приложение и выбери расписание</div>';
           return;
         }
         if (!data) return;
@@ -103,7 +105,8 @@
               const l = pr.lessons[0];
               const extra = pr.lessons.length > 1 ? ` +${pr.lessons.length - 1}` : "";
               const ty = l.type ? ` (${l.type}.)` : "";
-              return `<div class="${cls}"><span class="n">${pr.n}</span><span class="t">${pr.start || ""}</span><span class="s">${esc(l.subject + ty + extra)}</span><span class="r">${esc(l.room)}</span></div>`;
+              const right = kind === "group" ? l.room : l.group;
+              return `<div class="${cls}"><span class="n">${pr.n}</span><span class="t">${pr.start || ""}</span><span class="s">${esc(l.subject + ty + extra)}</span><span class="r">${esc(right)}</span></div>`;
             }).join("")
           : '<div class="msg">Пар нет 🎉</div>';
         const upd = data.checked_at ? new Date(data.checked_at) : null;
@@ -115,8 +118,8 @@
       async function refresh() {
         if (!group) return render();
         try {
-          const r = await C.rpc("oshtu_schedule", { p_group: group, p_semester: semester, p_name: name || null, p_max_age_sec: 300 });
-          data = { ...r, savedAt: Date.now() };
+          const r = await C.rpc("oshtu_timetable", { p_kind: kind, p_id: group, p_semester: semester, p_name: name || null, p_max_age_sec: 300 });
+          data = { ...r, kind, savedAt: Date.now() };
           C.store.set(key, data);
         } catch (e) {
           if (!data) document.getElementById("list").innerHTML = '<div class="msg">Нет связи. Данные появятся при подключении.</div>';

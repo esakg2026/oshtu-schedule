@@ -35,13 +35,13 @@
 
     <div class="card group" id="groupCard">
       <div>
-        <div class="note">Твоя группа</div>
+        <div class="note">Твоё расписание</div>
         <strong id="gName">—</strong>
       </div>
       <a class="btn btn-sm" href="./" style="text-decoration:none">Сменить</a>
     </div>
     <div class="card" id="noGroup" hidden>
-      <p style="margin:0 0 10px">Сначала выбери группу в приложении — её номер подставится в виджет.</p>
+      <p style="margin:0 0 10px">Сначала выбери группу, преподавателя или аудиторию в приложении — выбор подставится в виджет.</p>
       <a class="btn btn-primary btn-block" href="./">Выбрать группу</a>
     </div>
 
@@ -58,7 +58,7 @@
       <div class="num">2</div>
       <div>
         <h3>Скопируй скрипт</h3>
-        <p>В нём уже твоя группа.</p>
+        <p>В нём уже твой выбор и напоминание за 5 минут до пары.</p>
         <button id="copyBtn" class="btn btn-primary btn-block" style="margin-top:10px" disabled>Скопировать скрипт</button>
       </div>
     </div>
@@ -94,19 +94,23 @@
         t.textContent = msg; t.classList.add("show");
         setTimeout(function () { t.classList.remove("show"); }, 2500);
       };
-      if (!settings.groupId) {
+      if (settings.groupId && !settings.targetId) { settings.mode = "group"; settings.targetId = settings.groupId; settings.targetName = settings.groupName; }
+      if (!settings.targetId) {
         document.getElementById("groupCard").hidden = true;
         document.getElementById("noGroup").hidden = false;
         return;
       }
-      document.getElementById("gName").textContent = settings.groupName || settings.groupId;
+      document.getElementById("gName").textContent = (settings.mode === "room" ? "Аудитория " : "") + (settings.targetName || settings.targetId);
       var script = null;
       fetch("iphone-widget.js", { cache: "no-store" }).then(function (r) { return r.text(); }).then(function (tpl) {
-        var name = JSON.stringify(String(settings.groupName || "")).slice(1, -1);
+        var name = JSON.stringify(String(settings.targetName || "")).slice(1, -1);
         var sem = settings.semester === "1" || settings.semester === "2" ? settings.semester : "auto";
-        script = tpl.replace("__GROUP__", String(Number(settings.groupId)))
+        var kind = settings.mode === "teacher" || settings.mode === "room" ? settings.mode : "group";
+        script = tpl.replace("__KIND__", kind)
+          .replace("__GROUP__", String(Number(settings.targetId || settings.groupId)))
           .replace("__GROUP_NAME__", name)
           .replace("__SEMESTER__", sem)
+          .replace("__NOTIFY__", String(Number(settings.notify == null ? 5 : settings.notify) || 0))
           .replace("__FLIP__", settings.weekFlip ? "true" : "false");
         document.getElementById("copyBtn").disabled = false;
       }).catch(function () { toast("Не удалось загрузить скрипт — проверь интернет"); });

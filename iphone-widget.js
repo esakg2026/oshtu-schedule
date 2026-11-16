@@ -2,8 +2,10 @@
 // Установка: https://oshtu-schedule.onrender.com/iphone.html
 // Поддерживает виджеты: маленький, средний, большой и на экране блокировки.
 
-const GROUP = __GROUP__;            // ID группы на портале ОшТУ
+const KIND = "__KIND__";            // "group", "teacher" или "room"
+const GROUP = __GROUP__;            // ID группы / преподавателя / аудитории на портале ОшТУ
 const GROUP_NAME = "__GROUP_NAME__";
+const NOTIFY = __NOTIFY__;          // напоминание за N минут до пары (0 — выключено)
 const SEMESTER = "__SEMESTER__";    // "auto", "1" (весенний) или "2" (осенний)
 const FLIP = __FLIP__;              // true — если верхняя/нижняя неделя показываются наоборот
 
@@ -20,7 +22,7 @@ const C = {
 
 // ---------- данные ----------
 const fm = FileManager.local();
-const cachePath = fm.joinPath(fm.documentsDirectory(), `oshtu-${GROUP}.json`);
+const cachePath = fm.joinPath(fm.documentsDirectory(), `oshtu-${KIND}-${GROUP}.json`);
 
 function semesterId() {
   if (SEMESTER === "1" || SEMESTER === "2") return Number(SEMESTER);
@@ -32,11 +34,11 @@ async function load() {
   let lastErr;
   for (const base of API) {
     try {
-      const req = new Request(`${base}/rest/v1/rpc/oshtu_schedule`);
+      const req = new Request(`${base}/rest/v1/rpc/oshtu_timetable`);
       req.method = "POST";
       req.timeoutInterval = 15;
       req.headers = { apikey: KEY, "Content-Type": "application/json" };
-      req.body = JSON.stringify({ p_group: GROUP, p_semester: semesterId(), p_name: GROUP_NAME || null, p_max_age_sec: 300 });
+      req.body = JSON.stringify({ p_kind: KIND, p_id: GROUP, p_semester: semesterId(), p_name: GROUP_NAME || null, p_max_age_sec: 300 });
       const data = await req.loadJSON();
       if (!data || !data.raw) throw new Error((data && data.message) || "bad response");
       data._savedAt = Date.now();
@@ -54,20 +56,28 @@ async function load() {
 const TYPE_RE = /\((лк|пр|лб|лаб|сем)[^)]*\)/i;
 const decode = (s) => s.replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
+// формат ячейки: group «Предмет (лк.)/Преподаватель [ауд]», teacher «Группа (лк.) [ауд]/Предмет», room «Предмет (лк.)/Группа Преподаватель»
 function parseBlock(html) {
   const lines = html.split(/<br\s*\/?>/i).map((s) => decode(s.replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim()).filter(Boolean);
   const out = [];
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/^(.*?)\s*\((лк|пр|лб|лаб|сем)[^)]*\)\s*$/i);
+    const m = lines[i].match(/^(.*?)\s*\((лк|пр|лб|лаб|сем)[^)]*\)\s*(?:\[([^\]]+)\])?\s*$/i);
     if (m) {
-      const l = { subject: m[1].trim(), type: m[2].toLowerCase().slice(0, 2), teacher: "", room: "" };
-      const next = lines[i + 1];
-      if (next && !TYPE_RE.test(next)) {
-        const r = next.match(/^(.*?)\s*\[([^\]]+)\]\s*$/);
-        l.teacher = r ? r[1].trim() : next;
-        l.room = r ? r[2].trim() : "";
-        i++;
+      const sm = m[1].trim().match(/^\((\d+)\)\s*(.*)$/);
+      const head = sm ? sm[2].trim() : m[1].trim();
+      const l = { subject: "", type: m[2].toLowerCase().slice(0, 2), teacher: "", room: (m[3] || "").trim(), group: "", sub: sm ? sm[1] : "" };
+      const next = lines[i + 1] && !TYPE_RE.test(lines[i + 1]) ? lines[i + 1] : null;
+      if (KIND === "teacher") {
+        l.group = head;
+        if (next) { l.subject = next; i++; }
+      } else if (KIND === "room") {
+        l.subject = head;
+        if (next) { const g = next.match(/^(\S*\d\S*)\s+(.+)$/); if (g) { l.group = g[1]; l.teacher = g[2]; } else l.teacher = next; i++; }
+      } else {
+        l.subject = head;
+        if (next) { const r = next.match(/^(.*?)\s*\[([^\]]+)\]\s*$/); l.teacher = r ? r[1].trim() : next; l.room = r ? r[2].trim() : ""; i++; }
       }
+      if (!l.subject) l.subject = l.group || "Занятие";
       out.push(l);
     } else {
       const r = lines[i].match(/^(.*?)\s*\[([^\]]+)\]\s*$/);
@@ -263,9 +273,10 @@ function build(data, offline) {
     s.font = Font.semiboldSystemFont(small ? 12 : 13);
     s.textColor = past ? C.past : C.text;
     s.lineLimit = 1;
-    if (!small && l.room) {
+    const right = KIND === "group" ? l.room : l.group;
+    if (!small && right) {
       row.addSpacer();
-      const r = row.addText(l.room);
+      const r = row.addText(right);
       r.font = Font.systemFont(11);
       r.textColor = cur ? C.text : past ? C.past : C.muted;
     }
@@ -284,10 +295,42 @@ function build(data, offline) {
   return w;
 }
 
+// напоминания: пары на 3 дня вперёд (Scriptable разрешает только встроенные звуки)
+async function scheduleReminders(data) {
+  if (typeof Notification === "undefined") return;
+  try {
+    const pending = await Notification.allPending();
+    const ours = pending.filter((n) => n.threadIdentifier === "oshtu-lessons").map((n) => n.identifier);
+    if (ours.length) Notification.removePending(ours);
+    if (!NOTIFY) return;
+    const now = new Date();
+    for (let i = 0; i < 3; i++) {
+      const day = addDays(now, i);
+      for (const p of lessonsOn(data, day)) {
+        if (!p.start) continue;
+        const at = new Date(day.getTime() + toMin(p.start) * 60e3);
+        const fire = new Date(at.getTime() - NOTIFY * 60e3);
+        if (fire <= now) continue;
+        const l = p.lessons[0];
+        const n = new Notification();
+        n.identifier = `oshtu-${at.getTime()}`;
+        n.threadIdentifier = "oshtu-lessons";
+        n.title = `Через ${NOTIFY} мин — ${p.n}-я пара (${p.start})`;
+        n.body = [l.subject, KIND !== "group" ? l.group : "", KIND !== "teacher" ? l.teacher : "", KIND !== "room" && l.room ? "ауд. " + l.room : ""].filter(Boolean).join(" · ");
+        n.sound = "piano_success";
+        n.openURL = SITE;
+        n.setTriggerDate(fire);
+        await n.schedule();
+      }
+    }
+  } catch (e) {}
+}
+
 async function main() {
   let widget;
   try {
     const { data, offline } = await load();
+    await scheduleReminders(data);
     widget = build(data, offline);
   } catch (e) {
     widget = new ListWidget();
