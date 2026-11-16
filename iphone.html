@@ -111,6 +111,7 @@
           .replace("__GROUP_NAME__", name)
           .replace("__SEMESTER__", sem)
           .replace("__NOTIFY__", String(Number(settings.notify == null ? 5 : settings.notify) || 0))
+          .replace("__STYLE__", settings.notifyStyle === "simple" ? "simple" : "melody")
           .replace("__FLIP__", settings.weekFlip ? "true" : "false");
         document.getElementById("copyBtn").disabled = false;
       }).catch(function () { toast("Не удалось загрузить скрипт — проверь интернет"); });

@@ -24,6 +24,7 @@
     settings.targetName = settings.groupName;
   }
   if (settings.notify == null) settings.notify = 5;
+  if (!settings.notifyStyle) settings.notifyStyle = "melody"; // simple | melody | voice
 
   const state = {
     date: null,
@@ -494,11 +495,18 @@
     return (await Notification.requestPermission()) === "granted";
   }
 
-  async function showReminder(title, body) {
-    C.playChime();
+  async function showReminder(title, body, speech) {
+    const style = settings.notifyStyle || "melody";
+    if (style === "voice") {
+      C.playChime();
+      setTimeout(() => C.speak(speech || `${title}. ${body}`), 2300);
+    } else if (style === "melody") {
+      C.playChime();
+    }
     toast(`🔔 ${title}`, 6000);
     if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const opts = { body, icon: "icon-192.png", badge: "icon-192.png", tag: "oshtu-reminder", renotify: true, vibrate: [120, 60, 120] };
+    // для «Обычного» и «Голосового» звук играет страница, системный звук не нужен
+    const opts = { body, icon: "icon-192.png", badge: "icon-192.png", tag: "oshtu-reminder", renotify: true, vibrate: [120, 60, 120], silent: style !== "simple" };
     try {
       const reg = await navigator.serviceWorker?.getRegistration();
       if (reg) return reg.showNotification(title, opts);
@@ -517,11 +525,31 @@
       if (now >= fireAt && now < at.getTime() && !done[key]) {
         done[key] = now;
         const l = pair.lessons[0];
-        showReminder(`Через ${Math.max(1, Math.round((at.getTime() - now) / 60e3))} мин — ${pair.n}-я пара (${pair.start})`, lessonLine(l));
+        const left = Math.max(1, Math.round((at.getTime() - now) / 60e3));
+        showReminder(`Через ${left} мин — ${pair.n}-я пара (${pair.start})`, lessonLine(l), C.speechText(mode(), pair, left));
       }
     }
     for (const k of Object.keys(done)) if (now - done[k] > 2 * 864e5) delete done[k];
     C.store.set(NOTIFIED_KEY, done);
+  }
+
+  function styleHintText() {
+    const s = settings.notifyStyle || "melody";
+    if (s === "simple") return "Простой: стандартный звук уведомления телефона.";
+    if (s === "melody") return "Обычный: своя мелодия «Расписания ОшТУ».";
+    const who = mode() === "teacher" ? "у какой группы" : mode() === "room" ? "у какой группы и кто проводит" : "кто проводит";
+    let t = `Голосовой: мелодия, затем голос скажет, сколько минут осталось, в какой аудитории, что за занятие и ${who}.`;
+    if (iosBridge()) t += " На iPhone голос звучит, когда приложение открыто; если закрыто — придёт уведомление с мелодией.";
+    return t;
+  }
+
+  // пример ближайшего занятия для проверки
+  function samplePair() {
+    if (state.data) {
+      const up = C.upcomingStarts(state.data, settings.weekFlip, new Date(), 7)[0];
+      if (up) return up.pair;
+    }
+    return { n: 4, start: "12:50", lessons: [{ subject: "Аналитика больших данных", type: "лк", room: "3/303", teacher: "Матисаков Ж.К.", group: "ПИ-1-23", sub: "" }] };
   }
 
   function notifyHintText() {
@@ -788,6 +816,8 @@
     setSeg("sSemester", settings.semester ? String(settings.semester) : "auto");
     setSeg("sTheme", settings.theme || "auto");
     setSeg("sNotify", String(settings.notify || 0));
+    setSeg("sNotifyStyle", settings.notifyStyle || "melody");
+    $("styleHint").textContent = styleHintText();
     $("notifyHint").textContent = notifyHintText();
     $("widgetUrl").value = widgetUrl();
     $("widgetOpen").href = widgetUrl();
@@ -845,10 +875,28 @@
       setSeg("sNotify", String(v));
       toast(v ? `Напомню за ${v} мин до начала пары` : "Напоминания выключены");
     };
+    $("sNotifyStyle").onclick = (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      settings.notifyStyle = b.dataset.v;
+      saveSettings();
+      setSeg("sNotifyStyle", b.dataset.v);
+      $("styleHint").textContent = styleHintText();
+    };
     $("sTestSound").onclick = () => {
-      if (androidBridge() && androidBridge().testReminder) androidBridge().testReminder();
-      else if (iosBridge()) iosBridge().postMessage(JSON.stringify({ action: "testReminder" }));
-      else C.playChime();
+      const min = Number(settings.notify) || 5;
+      const p = samplePair();
+      const title = `Через ${min} мин — ${p.n}-я пара (${p.start})`;
+      const body = lessonLine(p.lessons[0]);
+      const speech = C.speechText(mode(), p, min);
+      if (androidBridge() && androidBridge().testReminder) {
+        // новые версии принимают текст; старые — без аргументов
+        try { androidBridge().testReminder(title, body, speech); } catch { androidBridge().testReminder(); }
+      } else if (iosBridge()) {
+        iosBridge().postMessage(JSON.stringify({ action: "testReminder", title, body, speech }));
+      } else {
+        showReminder(title, body, speech);
+      }
     };
     $("sWeek").onclick = (e) => {
       const b = e.target.closest("button");

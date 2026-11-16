@@ -6,6 +6,7 @@ const KIND = "__KIND__";            // "group", "teacher" или "room"
 const GROUP = __GROUP__;            // ID группы / преподавателя / аудитории на портале ОшТУ
 const GROUP_NAME = "__GROUP_NAME__";
 const NOTIFY = __NOTIFY__;          // напоминание за N минут до пары (0 — выключено)
+const STYLE = "__STYLE__";          // "simple" — стандартный звук, иначе — мелодия Scriptable
 const SEMESTER = "__SEMESTER__";    // "auto", "1" (весенний) или "2" (осенний)
 const FLIP = __FLIP__;              // true — если верхняя/нижняя неделя показываются наоборот
 
@@ -317,7 +318,7 @@ async function scheduleReminders(data) {
         n.threadIdentifier = "oshtu-lessons";
         n.title = `Через ${NOTIFY} мин — ${p.n}-я пара (${p.start})`;
         n.body = [l.subject, KIND !== "group" ? l.group : "", KIND !== "teacher" ? l.teacher : "", KIND !== "room" && l.room ? "ауд. " + l.room : ""].filter(Boolean).join(" · ");
-        n.sound = "piano_success";
+        n.sound = STYLE === "simple" ? "default" : "piano_success";
         n.openURL = SITE;
         n.setTriggerDate(fire);
         await n.schedule();

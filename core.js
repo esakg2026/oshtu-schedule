@@ -332,7 +332,60 @@
     } catch {}
   }
 
+  // ---------- голосовое напоминание ----------
+  const ORD = ["", "первая", "вторая", "третья", "четвёртая", "пятая", "шестая", "седьмая"];
+  const TYPE_WORD = { лк: "лекция", пр: "практика", лб: "лабораторная работа", ла: "лабораторная работа", се: "семинар" };
+
+  function minutesWord(n) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return "минута";
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return "минуты";
+    return "минут";
+  }
+
+  // «3/303» → «корпус 3, аудитория 303» — так понятнее на слух
+  function roomWords(room) {
+    const m = String(room || "").match(/^\s*([^/]+)\/(.+)$/);
+    return m ? `корпус ${m[1].trim()}, аудитория ${m[2].trim()}` : `аудитория ${room}`;
+  }
+
+  /** Текст для озвучивания: время до пары, аудитория, предмет, кто проводит / у кого. */
+  function speechText(kind, pair, minutes) {
+    const l = pair.lessons[0];
+    const parts = [];
+    const ord = ORD[pair.n] ? `${ORD[pair.n]} пара` : `${pair.n}-я пара`;
+    const acc = minutesWord(minutes) === "минута" ? "минуту" : minutesWord(minutes); // «через 1 минуту»
+    if (kind === "room") {
+      parts.push(`Через ${minutes} ${acc} в этой аудитории начнётся ${ord}.`);
+    } else {
+      parts.push(`До занятия ${minutesWord(minutes) === "минута" ? "осталась" : "осталось"} ${minutes} ${minutesWord(minutes)}. Начинается ${ord}.`);
+    }
+    parts.push(`${l.subject}${TYPE_WORD[l.type] ? ", " + TYPE_WORD[l.type] : ""}.`);
+    if (kind !== "room" && l.room) parts.push(`Занятие пройдёт: ${roomWords(l.room)}.`);
+    if (kind !== "group" && l.group) parts.push(`У группы ${l.group}${l.sub ? ", " + l.sub + " подгруппа" : ""}.`);
+    if (kind !== "teacher" && l.teacher) parts.push(`Проводит ${l.teacher.replace(/\.+$/, "")}.`);
+    if (kind === "group" && l.sub) parts.push(`Для ${l.sub} подгруппы.`);
+    return parts.join(" ");
+  }
+
+  function speak(text) {
+    try {
+      if (!("speechSynthesis" in window)) return false;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "ru-RU";
+      u.rate = 0.95;
+      const ru = speechSynthesis.getVoices().find((v) => /^ru/i.test(v.lang));
+      if (ru) u.voice = ru;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   window.Core = {
+    speechText, speak,
     KINDS, upcomingStarts, parseAnyDate, playChime,
     weekKey, daysFor,
     PAIR_TIMES, TYPES, store, rpc, parseSchedule, weekType, autoSemester,
