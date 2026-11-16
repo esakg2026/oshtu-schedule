@@ -9,6 +9,35 @@ const NOTIFY = __NOTIFY__;          // напоминание за N минут 
 const STYLE = "__STYLE__";          // "simple" — стандартный звук, иначе — мелодия Scriptable
 const SEMESTER = "__SEMESTER__";    // "auto", "1" (весенний) или "2" (осенний)
 const FLIP = __FLIP__;              // true — если верхняя/нижняя неделя показываются наоборот
+const LANG_RAW = "__LANG__";        // язык: "ru", "ky" или "en"
+const LANG = ["ru", "ky", "en"].includes(LANG_RAW) ? LANG_RAW : "ru";
+const TR = {
+  ru: { today: "Сегодня", tomorrow: "Завтра", h: "ч", min: "мин", first: "Первая пара", next: "Дальше {n}-я", in: "через {d}",
+        now: "Сейчас {n}-я · ещё {d}", none: "Пар нет", noneLow: "пар нет", pairs: "пар(ы)", dayOff: "Выходной", more: "ещё {n}…",
+        top: "верхняя", bottom: "нижняя", offline: "нет сети, копия", upd: "обновлено", room: "ауд.", rem: "Через {m} мин — {n}-я пара ({t})",
+        err: "Нет связи и нет сохранённого расписания. Открой виджет, когда появится интернет.",
+        wd: ["", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"], wds: ["", "пн", "вт", "ср", "чт", "пт", "сб", "вс"],
+        mons: ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
+        type: { лк: "лк.", пр: "пр.", лб: "лаб.", ла: "лаб.", се: "сем." } },
+  ky: { today: "Бүгүн", tomorrow: "Эртең", h: "саат", min: "мүн", first: "Биринчи пара", next: "Андан кийин {n}-пара", in: "{d} кийин",
+        now: "Азыр {n}-пара · дагы {d}", none: "Сабак жок", noneLow: "сабак жок", pairs: "пара", dayOff: "Дем алыш", more: "дагы {n}…",
+        top: "үстүңкү", bottom: "астыңкы", offline: "тармак жок, көчүрмө", upd: "жаңыланды", room: "ауд.", rem: "{m} мүнөттөн кийин — {n}-пара ({t})",
+        err: "Байланыш жок жана сакталган жадыбал жок. Интернет пайда болгондо виджетти ачыңыз.",
+        wd: ["", "дүйшөмбү", "шейшемби", "шаршемби", "бейшемби", "жума", "ишемби", "жекшемби"], wds: ["", "дш", "шш", "шр", "бш", "жм", "иш", "жк"],
+        mons: ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
+        type: { лк: "лк.", пр: "пр.", лб: "лаб.", ла: "лаб.", се: "сем." } },
+  en: { today: "Today", tomorrow: "Tomorrow", h: "h", min: "min", first: "First class", next: "Next: period {n}", in: "in {d}",
+        now: "Period {n} now · {d} left", none: "No classes", noneLow: "no classes", pairs: "classes", dayOff: "Day off", more: "{n} more…",
+        top: "top", bottom: "bottom", offline: "offline copy", upd: "updated", room: "room", rem: "In {m} min — period {n} ({t})",
+        err: "No connection and no saved schedule. Open the widget when you're online.",
+        wd: ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], wds: ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        mons: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        type: { лк: "lec.", пр: "pr.", лб: "lab", ла: "lab", се: "sem." } },
+};
+const L = TR[LANG];
+const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => (v[k] != null ? v[k] : m));
+const hhmm = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+const subDate = (d) => `${L.wds[((d.getDay() + 6) % 7) + 1]}, ${LANG === "ky" ? d.getDate() + "-" : d.getDate() + " "}${L.mons[d.getMonth()]}`;
 
 const SITE = "https://oshtu-schedule.onrender.com";
 const API = [SITE + "/sb", "https://pzdraaxgzphxennadrlu.supabase.co"];
@@ -147,10 +176,10 @@ function pickDay(data) {
 function dur(min) {
   min = Math.max(0, Math.round(min));
   const h = Math.floor(min / 60), m = min % 60;
-  return h && m ? `${h} ч ${m} мин` : h ? `${h} ч` : `${m} мин`;
+  return h && m ? `${h} ${L.h} ${m} ${L.min}` : h ? `${h} ${L.h}` : `${m} ${L.min}`;
 }
 
-const TYPE = { лк: "лк.", пр: "пр.", лб: "лаб.", ла: "лаб.", се: "сем." };
+const TYPE = L.type;
 
 // ---------- виджет ----------
 function status(list, isToday) {
@@ -160,8 +189,8 @@ function status(list, isToday) {
     const p = list[i];
     if (!p.start) continue;
     const s = toMin(p.start), e = toMin(p.end);
-    if (t < s) return { text: `${i === 0 ? "Первая пара" : `Дальше ${p.n}-я`} через ${dur(s - t)}`, pair: p };
-    if (t < e) return { text: `Сейчас ${p.n}-я · ещё ${dur(e - t)}`, pair: p, now: true };
+    if (t < s) return { text: `${i === 0 ? L.first : fmt(L.next, { n: p.n })} ${fmt(L.in, { d: dur(s - t) })}`, pair: p };
+    if (t < e) return { text: fmt(L.now, { n: p.n, d: dur(e - t) }), pair: p, now: true };
   }
   return null;
 }
@@ -190,16 +219,16 @@ function build(data, offline) {
   const st = status(list, isToday);
   w.refreshAfterDate = nextRefresh(list, isToday);
 
-  const title = isToday ? "Сегодня" : (addDays(new Date(), 1).getTime() === d.getTime() ? "Завтра" : d.toLocaleDateString("ru-RU", { weekday: "long" }));
+  const title = isToday ? L.today : (addDays(new Date(), 1).getTime() === d.getTime() ? L.tomorrow : L.wd[dow(d)]);
 
   // экран блокировки
   if (family.startsWith("accessory")) {
     if (family === "accessoryInline") {
       const p = st ? st.pair : list[0];
-      w.addText(p ? `${p.n} · ${p.start} ${p.lessons[0].subject}` : "Пар нет");
+      w.addText(p ? `${p.n} · ${p.start} ${p.lessons[0].subject}` : L.none);
       return w;
     }
-    const t = w.addText(st ? st.text : `${title}: ${list.length ? list.length + " пар(ы)" : "пар нет"}`);
+    const t = w.addText(st ? st.text : `${title}: ${list.length ? list.length + " " + L.pairs : L.noneLow}`);
     t.font = Font.boldSystemFont(12);
     t.lineLimit = 1;
     const shown = st ? [st.pair] : list.slice(0, 2);
@@ -225,7 +254,7 @@ function build(data, offline) {
   ht.textColor = C.text;
   head.addSpacer();
   if (!small) {
-    const sub = head.addText(`${d.toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" })} · ${isTop(d) ? "верхняя" : "нижняя"}`);
+    const sub = head.addText(`${subDate(d)} · ${isTop(d) ? L.top : L.bottom}`);
     sub.font = Font.systemFont(11);
     sub.textColor = C.muted;
   }
@@ -244,7 +273,7 @@ function build(data, offline) {
   w.addSpacer(small ? 6 : 8);
 
   if (!list.length) {
-    const e = w.addText(dow(d) === 7 ? "Выходной" : "Пар нет 🎉");
+    const e = w.addText(dow(d) === 7 ? L.dayOff : L.none + " 🎉");
     e.font = Font.mediumSystemFont(small ? 13 : 15);
     e.textColor = C.muted;
   }
@@ -284,13 +313,13 @@ function build(data, offline) {
     w.addSpacer(2);
   }
   if (list.length > max) {
-    const more = w.addText(`ещё ${list.length - max}…`);
+    const more = w.addText(fmt(L.more, { n: list.length - max }));
     more.font = Font.systemFont(11);
     more.textColor = C.muted;
   }
 
   w.addSpacer();
-  const foot = w.addText(`${GROUP_NAME} · ${offline ? "нет сети, копия" : "обновлено"} ${new Date(data._savedAt || Date.now()).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`);
+  const foot = w.addText(`${GROUP_NAME} · ${offline ? L.offline : L.upd} ${hhmm(new Date(data._savedAt || Date.now()))}`);
   foot.font = Font.systemFont(10);
   foot.textColor = C.muted;
   return w;
@@ -316,8 +345,8 @@ async function scheduleReminders(data) {
         const n = new Notification();
         n.identifier = `oshtu-${at.getTime()}`;
         n.threadIdentifier = "oshtu-lessons";
-        n.title = `Через ${NOTIFY} мин — ${p.n}-я пара (${p.start})`;
-        n.body = [l.subject, KIND !== "group" ? l.group : "", KIND !== "teacher" ? l.teacher : "", KIND !== "room" && l.room ? "ауд. " + l.room : ""].filter(Boolean).join(" · ");
+        n.title = fmt(L.rem, { m: NOTIFY, n: p.n, t: p.start });
+        n.body = [l.subject, KIND !== "group" ? l.group : "", KIND !== "teacher" ? l.teacher : "", KIND !== "room" && l.room ? L.room + " " + l.room : ""].filter(Boolean).join(" · ");
         n.sound = STYLE === "simple" ? "default" : "piano_success";
         n.openURL = SITE;
         n.setTriggerDate(fire);
@@ -336,7 +365,7 @@ async function main() {
   } catch (e) {
     widget = new ListWidget();
     widget.backgroundColor = C.bg1;
-    const t = widget.addText("Нет связи и нет сохранённого расписания. Открой виджет, когда появится интернет.");
+    const t = widget.addText(L.err);
     t.textColor = C.muted;
     t.font = Font.systemFont(12);
     widget.refreshAfterDate = new Date(Date.now() + 10 * 60e3);

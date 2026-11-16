@@ -131,6 +131,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   text-align: center;
 }
 .setup-logo { border-radius: 18px; }
+.lang-seg { margin: -8px 0 18px; }
 .setup-card h1 { font-size: 24px; margin: 14px 0 6px; letter-spacing: -0.02em; }
 .setup-card p { margin: 0 0 20px; font-size: 15px; }
 .field { display: block; text-align: left; margin-bottom: 14px; }

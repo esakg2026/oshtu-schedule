@@ -16,46 +16,124 @@
     p, li { color: var(--text); font-size: 15px; line-height: 1.55; }
     .muted { color: var(--muted); font-size: 14px; }
     .card { background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 4px 18px 16px; margin-top: 14px; }
+    .langs { display: flex; gap: 8px; margin-top: 12px; }
+    .langs a { color: var(--accent); font-weight: 600; text-decoration: none; font-size: 14px; }
+    .langs a.on { color: var(--text); }
+    [data-lang] { display: none; }
+    [data-lang].on { display: block; }
   </style>
 </head>
 <body>
   <div class="page">
-    <a class="back" href="./">‹ К расписанию</a>
-    <h1>Политика конфиденциальности</h1>
-    <p class="muted">Приложение «Расписание ОшТУ» (веб-версия, Android и iOS). Действует с 15 ноября 2026 г.</p>
+    <div class="langs"><a href="?l=ru" data-l="ru">Русский</a> · <a href="?l=ky" data-l="ky">Кыргызча</a> · <a href="?l=en" data-l="en">English</a></div>
 
-    <div class="card">
-      <h2>Кто мы</h2>
-      <p>Приложение разработано компанией <b>ESA</b>. Владелец — <b>Эркебаев Самат Адылович</b>.
-        Приложение неофициальное и не связано с администрацией Ошского технологического университета им. акад. М.М. Адышева.</p>
-
-      <h2>Какие данные мы обрабатываем</h2>
-      <ul>
-        <li><b>Выбор (группа, преподаватель или аудитория), семестр и настройки</b> (тема, неделя, напоминания) хранятся только на вашем устройстве.</li>
-        <li>Чтобы показать расписание, приложение отправляет на сервер <b>номер группы / преподавателя / аудитории и семестр</b> — это публичные данные сайта ОшТУ. Сервер хранит расписание группы и время последнего запроса, чтобы обновлять его автоматически.</li>
-        <li>Мы <b>не собираем</b> имя, телефон, email, геолокацию, контакты, фото и другие личные данные. Регистрация не нужна.</li>
-        <li><b>Напоминания о парах</b> создаются прямо на вашем устройстве (локальные уведомления). Мы не используем push-серверы и не храним данные для уведомлений.</li>
-        <li>Рекламы, аналитики и трекеров нет.</li>
-      </ul>
-
-      <h2>Откуда берётся расписание</h2>
-      <p>Из открытого раздела «Расписание занятий» сайта portal.oshtu.kg. Данные копируются в нашу базу (Supabase), чтобы приложение работало, даже когда сайт университета недоступен.</p>
-
-      <h2>Сторонние сервисы</h2>
-      <ul>
-        <li><b>Render</b> — хостинг сайта приложения.</li>
-        <li><b>Supabase</b> — база данных с расписанием.</li>
-      </ul>
-      <p>Как любые веб-серверы, они могут временно хранить технические журналы (IP-адрес, время запроса) для защиты и работы сервиса.</p>
-
-      <h2>Удаление данных</h2>
-      <p>Все личные настройки хранятся на вашем устройстве: удалите приложение или очистите данные сайта — и они исчезнут.</p>
-
-      <h2>Контакты</h2>
-      <p>Вопросы о приложении и данных: <a href="https://github.com/esakg2026/oshtu-schedule/issues">github.com/esakg2026/oshtu-schedule</a>.</p>
+    <div data-lang="ru">
+      <a class="back" href="./">‹ К расписанию</a>
+      <h1>Политика конфиденциальности</h1>
+      <p class="muted">Приложение «Расписание ОшТУ» (веб-версия, Android и iOS). Действует с 15 ноября 2026 г.</p>
+      <div class="card">
+        <h2>Кто мы</h2>
+        <p>Приложение разработано компанией <b>ESA</b>. Владелец — <b>Эркебаев Самат Адылович</b>.
+          Приложение неофициальное и не связано с администрацией Ошского технологического университета им. акад. М.М. Адышева.</p>
+        <h2>Какие данные мы обрабатываем</h2>
+        <ul>
+          <li><b>Выбор (группа, преподаватель или аудитория), семестр и настройки</b> (язык, тема, неделя, напоминания) хранятся только на вашем устройстве.</li>
+          <li>Чтобы показать расписание, приложение отправляет на сервер <b>номер группы / преподавателя / аудитории и семестр</b> — это публичные данные сайта ОшТУ. Сервер хранит расписание и время последнего запроса, чтобы обновлять его автоматически.</li>
+          <li>Мы <b>не собираем</b> имя, телефон, email, геолокацию, контакты, фото и другие личные данные. Регистрация не нужна.</li>
+          <li><b>Напоминания о парах</b> создаются прямо на вашем устройстве (локальные уведомления). Голосовые напоминания озвучивает синтезатор речи самого телефона.</li>
+          <li>Рекламы, аналитики и трекеров нет.</li>
+        </ul>
+        <h2>Откуда берётся расписание</h2>
+        <p>Из открытого раздела «Расписание занятий» сайта portal.oshtu.kg. Данные копируются в нашу базу (Supabase), чтобы приложение работало, даже когда сайт университета недоступен.</p>
+        <h2>Сторонние сервисы</h2>
+        <ul>
+          <li><b>Render</b> — хостинг сайта приложения.</li>
+          <li><b>Supabase</b> — база данных с расписанием.</li>
+        </ul>
+        <p>Как любые веб-серверы, они могут временно хранить технические журналы (IP-адрес, время запроса) для защиты и работы сервиса.</p>
+        <h2>Удаление данных</h2>
+        <p>Все личные настройки хранятся на вашем устройстве: удалите приложение или очистите данные сайта — и они исчезнут.</p>
+        <h2>Контакты</h2>
+        <p>Вопросы о приложении и данных: <a href="https://github.com/esakg2026/oshtu-schedule/issues">github.com/esakg2026/oshtu-schedule</a>.</p>
+      </div>
+      <p class="muted" style="text-align:center;margin-top:20px">© 2026 ESA · Эркебаев Самат Адылович</p>
     </div>
 
-    <p class="muted" style="text-align:center;margin-top:20px">© 2026 ESA · Эркебаев Самат Адылович</p>
+    <div data-lang="ky">
+      <a class="back" href="./">‹ Жадыбалга</a>
+      <h1>Купуялык саясаты</h1>
+      <p class="muted">«ОшТУ жадыбалы» тиркемеси (веб-версия, Android жана iOS). 2026-жылдын 15-ноябрынан тартып күчүндө.</p>
+      <div class="card">
+        <h2>Биз кимбиз</h2>
+        <p>Тиркемени <b>ESA</b> компаниясы иштеп чыккан. Ээси — <b>Эркебаев Самат Адылович</b>.
+          Тиркеме расмий эмес жана акад. М.М. Адышев атындагы Ош технологиялык университетинин администрациясына тиешеси жок.</p>
+        <h2>Кандай маалыматтарды иштетебиз</h2>
+        <ul>
+          <li><b>Тандооңуз (топ, окутуучу же аудитория), семестр жана жөндөөлөр</b> (тил, тема, апта, эскертүүлөр) сиздин түзмөгүңүздө гана сакталат.</li>
+          <li>Жадыбалды көрсөтүү үчүн тиркеме серверге <b>топтун / окутуучунун / аудиториянын номерин жана семестрди</b> жөнөтөт — бул ОшТУнун сайтындагы ачык маалымат. Сервер жадыбалды автоматтык жаңылоо үчүн аны жана акыркы суроо-талаптын убактысын сактайт.</li>
+          <li>Биз атыңызды, телефонуңузду, email, жайгашкан жериңизди, байланыштарды, сүрөттөрдү жана башка жеке маалыматтарды <b>чогултпайбыз</b>. Каттоо талап кылынбайт.</li>
+          <li><b>Сабак тууралуу эскертүүлөр</b> түз эле түзмөгүңүздө түзүлөт (жергиликтүү билдирмелер). Үн менен эскертүүнү телефондун өзүнүн кеп синтезатору окуйт.</li>
+          <li>Жарнама, аналитика жана трекерлер жок.</li>
+        </ul>
+        <h2>Жадыбал кайдан алынат</h2>
+        <p>portal.oshtu.kg сайтынын ачык «Сабактардын жадыбалы» бөлүмүнөн. Университеттин сайты иштебей калганда да тиркеме иштеши үчүн маалымат биздин базага (Supabase) көчүрүлөт.</p>
+        <h2>Үчүнчү тараптын кызматтары</h2>
+        <ul>
+          <li><b>Render</b> — тиркеменин сайтын жайгаштыруу.</li>
+          <li><b>Supabase</b> — жадыбал сакталган маалымат базасы.</li>
+        </ul>
+        <p>Бардык веб-серверлер сыяктуу эле, алар кызматты коргоо жана иштетүү үчүн техникалык журналдарды (IP-дарек, суроо-талаптын убактысы) убактылуу сакташы мүмкүн.</p>
+        <h2>Маалыматты өчүрүү</h2>
+        <p>Бардык жеке жөндөөлөр түзмөгүңүздө сакталат: тиркемени өчүрүңүз же сайттын маалыматын тазалаңыз — алар жок болот.</p>
+        <h2>Байланыш</h2>
+        <p>Тиркеме жана маалымат боюнча суроолор: <a href="https://github.com/esakg2026/oshtu-schedule/issues">github.com/esakg2026/oshtu-schedule</a>.</p>
+      </div>
+      <p class="muted" style="text-align:center;margin-top:20px">© 2026 ESA · Эркебаев Самат Адылович</p>
+    </div>
+
+    <div data-lang="en">
+      <a class="back" href="./">‹ Back to schedule</a>
+      <h1>Privacy policy</h1>
+      <p class="muted">The “OshTU Schedule” app (web, Android and iOS). Effective from 15 November 2026.</p>
+      <div class="card">
+        <h2>Who we are</h2>
+        <p>The app is developed by <b>ESA</b>. Owner — <b>Samat Adylovich Erkebaev</b>.
+          The app is unofficial and is not affiliated with the administration of Osh Technological University named after Acad. M.M. Adyshev.</p>
+        <h2>What data we process</h2>
+        <ul>
+          <li><b>Your choice (group, teacher or room), semester and settings</b> (language, theme, week, reminders) are stored only on your device.</li>
+          <li>To show the schedule, the app sends the server <b>the group / teacher / room number and the semester</b> — public data from the OshTU site. The server stores the schedule and the time of the last request to keep it updated automatically.</li>
+          <li>We <b>do not collect</b> your name, phone number, email, location, contacts, photos or any other personal data. No registration is needed.</li>
+          <li><b>Class reminders</b> are created right on your device (local notifications). Voice reminders are spoken by your phone's own speech synthesizer.</li>
+          <li>No ads, analytics or trackers.</li>
+        </ul>
+        <h2>Where the schedule comes from</h2>
+        <p>From the public “Class schedule” section of portal.oshtu.kg. The data is copied to our database (Supabase) so the app keeps working even when the university site is down.</p>
+        <h2>Third-party services</h2>
+        <ul>
+          <li><b>Render</b> — hosting of the app's website.</li>
+          <li><b>Supabase</b> — the schedule database.</li>
+        </ul>
+        <p>Like any web servers, they may temporarily keep technical logs (IP address, request time) for security and operation.</p>
+        <h2>Deleting data</h2>
+        <p>All personal settings are stored on your device: uninstall the app or clear the site data and they are gone.</p>
+        <h2>Contact</h2>
+        <p>Questions about the app and data: <a href="https://github.com/esakg2026/oshtu-schedule/issues">github.com/esakg2026/oshtu-schedule</a>.</p>
+      </div>
+      <p class="muted" style="text-align:center;margin-top:20px">© 2026 ESA · Samat Adylovich Erkebaev</p>
+    </div>
   </div>
+
+  <script src="i18n.js"></script>
+  <script>
+    (function () {
+      var l = (window.I18N && window.I18N.lang) || "ru";
+      var titles = { ru: "Политика конфиденциальности", ky: "Купуялык саясаты", en: "Privacy policy" };
+      document.documentElement.lang = l;
+      document.title = titles[l] || titles.ru;
+      Array.prototype.forEach.call(document.querySelectorAll("[data-lang]"), function (el) { el.classList.toggle("on", el.dataset.lang === l); });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-l]"), function (el) { el.classList.toggle("on", el.dataset.l === l); });
+    })();
+  </script>
 </body>
 </html>

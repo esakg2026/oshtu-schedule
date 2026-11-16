@@ -14,13 +14,20 @@
   // Понедельник недели, которая на сайте ОшТУ «верхняя» (неделя 9–14 ноября 2026).
   const WEEK_ANCHOR = new Date(2026, 10, 9);
 
-  const TYPES = {
-    лк: { label: "Лекция", cls: "lec" },
-    пр: { label: "Практика", cls: "prac" },
-    лб: { label: "Лабораторная", cls: "lab" },
-    ла: { label: "Лабораторная", cls: "lab" },
-    се: { label: "Семинар", cls: "prac" },
-  };
+  const L = () => window.I18N;
+  const tr = (k, v, fb) => (L() ? L().t(k, v) : fb);
+  const langNow = () => (L() ? L().lang : "ru");
+
+  // label — подпись на текущем языке
+  const TYPE_DEF = { лк: ["lec", "lec"], пр: ["prac", "prac"], лб: ["lab", "lab"], ла: ["lab", "lab"], се: ["sem", "prac"] };
+  const TYPE_RU = { lec: "Лекция", prac: "Практика", lab: "Лабораторная", sem: "Семинар" };
+  const TYPES = {};
+  for (const [k, [key, cls]] of Object.entries(TYPE_DEF)) {
+    Object.defineProperty(TYPES, k, {
+      enumerable: true,
+      get: () => ({ cls, label: tr(`type.${key}`, null, TYPE_RU[key]), short: tr(`typeShort.${key}`, null, k + ".") }),
+    });
+  }
 
   // ---------- хранилище ----------
   const store = {
@@ -219,9 +226,10 @@
     min = Math.max(0, Math.round(min));
     const h = Math.floor(min / 60);
     const m = min % 60;
-    if (h && m) return `${h} ч ${m} мин`;
-    if (h) return `${h} ч`;
-    return `${m} мин`;
+    const H = tr("dur.h", null, "ч"), M = tr("dur.min", null, "мин");
+    if (h && m) return `${h} ${H} ${m} ${M}`;
+    if (h) return `${h} ${H}`;
+    return `${m} ${M}`;
   }
 
   const sameLessons = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -332,9 +340,22 @@
     } catch {}
   }
 
-  // ---------- голосовое напоминание ----------
-  const ORD = ["", "первая", "вторая", "третья", "четвёртая", "пятая", "шестая", "седьмая"];
-  const TYPE_WORD = { лк: "лекция", пр: "практика", лб: "лабораторная работа", ла: "лабораторная работа", се: "семинар" };
+  // ---------- голосовое напоминание (ru / ky / en) ----------
+  // Та же логика продублирована в Schedule.java (Android) и Reminders.swift (iOS).
+  const SPEECH = {
+    ru: {
+      ord: ["", "первая", "вторая", "третья", "четвёртая", "пятая", "шестая", "седьмая"],
+      type: { лк: "лекция", пр: "практика", лб: "лабораторная работа", ла: "лабораторная работа", се: "семинар" },
+    },
+    ky: {
+      ord: ["", "биринчи", "экинчи", "үчүнчү", "төртүнчү", "бешинчи", "алтынчы", "жетинчи"],
+      type: { лк: "лекция", пр: "практика", лб: "лабораториялык иш", ла: "лабораториялык иш", се: "семинар" },
+    },
+    en: {
+      ord: ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh"],
+      type: { лк: "lecture", пр: "practical", лб: "lab", ла: "lab", се: "seminar" },
+    },
+  };
 
   function minutesWord(n) {
     const m10 = n % 10, m100 = n % 100;
@@ -343,41 +364,101 @@
     return "минут";
   }
 
-  // «3/303» → «корпус 3, аудитория 303» — так понятнее на слух
-  function roomWords(room) {
+  // «3/303» → корпус и аудитория отдельно — так понятнее на слух
+  function splitRoom(room) {
     const m = String(room || "").match(/^\s*([^/]+)\/(.+)$/);
-    return m ? `корпус ${m[1].trim()}, аудитория ${m[2].trim()}` : `аудитория ${room}`;
+    return m ? [m[1].trim(), m[2].trim()] : [null, String(room || "").trim()];
   }
 
   /** Текст для озвучивания: время до пары, аудитория, предмет, кто проводит / у кого. */
-  function speechText(kind, pair, minutes) {
+  function speechText(kind, pair, minutes, lang = langNow()) {
     const l = pair.lessons[0];
+    const S = SPEECH[lang] || SPEECH.ru;
+    const teacher = (l.teacher || "").replace(/\.+$/, "");
+    const tw = S.type[l.type] || "";
+    const [b, r] = splitRoom(l.room);
     const parts = [];
-    const ord = ORD[pair.n] ? `${ORD[pair.n]} пара` : `${pair.n}-я пара`;
-    const acc = minutesWord(minutes) === "минута" ? "минуту" : minutesWord(minutes); // «через 1 минуту»
-    if (kind === "room") {
-      parts.push(`Через ${minutes} ${acc} в этой аудитории начнётся ${ord}.`);
-    } else {
-      parts.push(`До занятия ${minutesWord(minutes) === "минута" ? "осталась" : "осталось"} ${minutes} ${minutesWord(minutes)}. Начинается ${ord}.`);
+
+    if (lang === "ky") {
+      const ord = S.ord[pair.n] ? `${S.ord[pair.n]} пара` : `${pair.n}-пара`;
+      if (kind === "room") parts.push(`${minutes} мүнөттөн кийин бул аудиторияда ${ord} башталат.`);
+      else parts.push(`Сабакка ${minutes} мүнөт калды. ${ord[0].toUpperCase() + ord.slice(1)} башталат.`);
+      parts.push(`${l.subject}${tw ? ", " + tw : ""}.`);
+      if (kind !== "room" && l.room) parts.push(`Сабак ${b ? `${b}-корпустун ${r}-аудиториясында` : `${r}-аудиторияда`} өтөт.`);
+      if (kind !== "group" && l.group) parts.push(`${l.group} тобу${l.sub ? `, ${l.sub}-топчо` : ""}.`);
+      if (kind !== "teacher" && teacher) parts.push(`Сабакты ${teacher} өткөрөт.`);
+      if (kind === "group" && l.sub) parts.push(`${l.sub}-топчо үчүн.`);
+      return parts.join(" ");
     }
-    parts.push(`${l.subject}${TYPE_WORD[l.type] ? ", " + TYPE_WORD[l.type] : ""}.`);
-    if (kind !== "room" && l.room) parts.push(`Занятие пройдёт: ${roomWords(l.room)}.`);
+
+    if (lang === "en") {
+      const ord = S.ord[pair.n] ? `the ${S.ord[pair.n]} period` : `period ${pair.n}`;
+      const mins = `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+      if (kind === "room") parts.push(`In ${mins}, ${ord} starts in this room.`);
+      else parts.push(`Your class starts in ${mins}. It's ${ord}.`);
+      parts.push(`${l.subject}${tw ? ", " + tw : ""}.`);
+      if (kind !== "room" && l.room) parts.push(`Room: ${b ? `building ${b}, room ${r}` : `room ${r}`}.`);
+      if (kind !== "group" && l.group) parts.push(`Group ${l.group}${l.sub ? `, subgroup ${l.sub}` : ""}.`);
+      if (kind !== "teacher" && teacher) parts.push(`Teacher: ${teacher}.`);
+      if (kind === "group" && l.sub) parts.push(`For subgroup ${l.sub}.`);
+      return parts.join(" ");
+    }
+
+    const ord = S.ord[pair.n] ? `${S.ord[pair.n]} пара` : `${pair.n}-я пара`;
+    const mw = minutesWord(minutes);
+    const acc = mw === "минута" ? "минуту" : mw; // «через 1 минуту»
+    if (kind === "room") parts.push(`Через ${minutes} ${acc} в этой аудитории начнётся ${ord}.`);
+    else parts.push(`До занятия ${mw === "минута" ? "осталась" : "осталось"} ${minutes} ${mw}. Начинается ${ord}.`);
+    parts.push(`${l.subject}${tw ? ", " + tw : ""}.`);
+    if (kind !== "room" && l.room) parts.push(`Занятие пройдёт: ${b ? `корпус ${b}, аудитория ${r}` : `аудитория ${r}`}.`);
     if (kind !== "group" && l.group) parts.push(`У группы ${l.group}${l.sub ? ", " + l.sub + " подгруппа" : ""}.`);
-    if (kind !== "teacher" && l.teacher) parts.push(`Проводит ${l.teacher.replace(/\.+$/, "")}.`);
+    if (kind !== "teacher" && teacher) parts.push(`Проводит ${teacher}.`);
     if (kind === "group" && l.sub) parts.push(`Для ${l.sub} подгруппы.`);
     return parts.join(" ");
   }
 
-  function speak(text) {
+  /**
+   * Куски текста для разных голосов. Английский текст содержит русские названия предметов и ФИО —
+   * их читает русский голос, остальное — английский. Кыргызский читает кыргызский голос,
+   * а если его нет в телефоне — русский (алфавит общий).
+   */
+  const CYR = /[А-Яа-яЁёӨөҮүҢң]/;
+  const LAT = /[A-Za-z]/;
+  function speechSegments(text, lang = langNow()) {
+    if (lang !== "en") return [{ text, lang }];
+    const out = [];
+    for (const w of text.split(/(\s+)/)) {
+      const k = CYR.test(w) ? "ru" : LAT.test(w) ? "en" : null;
+      const last = out[out.length - 1];
+      if (!last) out.push({ text: w, lang: k || "en" });
+      else if (k && k !== last.lang) out.push({ text: w, lang: k });
+      else last.text += w;
+    }
+    return out.filter((s) => s.text.trim());
+  }
+
+  function pickVoice(lang) {
+    const voices = speechSynthesis.getVoices();
+    const want = lang === "ky" ? [/^ky/i, /^ru/i] : lang === "en" ? [/^en/i] : [/^ru/i];
+    for (const re of want) {
+      const v = voices.find((x) => re.test(x.lang));
+      if (v) return v;
+    }
+    return null;
+  }
+
+  function speak(text, lang = langNow()) {
     try {
       if (!("speechSynthesis" in window)) return false;
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "ru-RU";
-      u.rate = 0.95;
-      const ru = speechSynthesis.getVoices().find((v) => /^ru/i.test(v.lang));
-      if (ru) u.voice = ru;
       speechSynthesis.cancel();
-      speechSynthesis.speak(u);
+      for (const seg of speechSegments(text, lang)) {
+        const u = new SpeechSynthesisUtterance(seg.text);
+        const v = pickVoice(seg.lang);
+        u.lang = v ? v.lang : { ru: "ru-RU", ky: "ru-RU", en: "en-US" }[seg.lang];
+        if (v) u.voice = v;
+        u.rate = 0.95;
+        speechSynthesis.speak(u);
+      }
       return true;
     } catch {
       return false;
@@ -385,7 +466,7 @@
   }
 
   window.Core = {
-    speechText, speak,
+    speechText, speak, speechSegments,
     KINDS, upcomingStarts, parseAnyDate, playChime,
     weekKey, daysFor,
     PAIR_TIMES, TYPES, store, rpc, parseSchedule, weekType, autoSemester,

@@ -29,64 +29,122 @@
 </head>
 <body>
   <div class="page">
-    <a class="back" href="./">‹ К расписанию</a>
-    <h1>Виджет для iPhone</h1>
-    <p class="lead">Пары на сегодня прямо на домашнем экране и экране блокировки. Нужно бесплатное приложение Scriptable.</p>
+    <a class="back" href="./" data-k="back">‹ К расписанию</a>
+    <h1 data-k="h1">Виджет для iPhone</h1>
+    <p class="lead" data-k="lead">Пары на сегодня прямо на домашнем экране и экране блокировки. Нужно бесплатное приложение Scriptable.</p>
 
     <div class="card group" id="groupCard">
       <div>
-        <div class="note">Твоё расписание</div>
+        <div class="note" data-k="yours">Твоё расписание</div>
         <strong id="gName">—</strong>
       </div>
-      <a class="btn btn-sm" href="./" style="text-decoration:none">Сменить</a>
+      <a class="btn btn-sm" href="./" style="text-decoration:none" data-k="change">Сменить</a>
     </div>
     <div class="card" id="noGroup" hidden>
-      <p style="margin:0 0 10px">Сначала выбери группу, преподавателя или аудиторию в приложении — выбор подставится в виджет.</p>
-      <a class="btn btn-primary btn-block" href="./">Выбрать группу</a>
+      <p style="margin:0 0 10px" data-k="noSel">Сначала выбери группу, преподавателя или аудиторию в приложении — выбор подставится в виджет.</p>
+      <a class="btn btn-primary btn-block" href="./" data-k="choose">Выбрать группу</a>
     </div>
 
     <div class="card step">
       <div class="num">1</div>
       <div>
-        <h3>Установи Scriptable</h3>
-        <p>Бесплатное приложение из App Store.</p>
-        <a class="btn btn-block" style="margin-top:10px" href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Открыть в App Store</a>
+        <h3 data-k="s1">Установи Scriptable</h3>
+        <p data-k="s1p">Бесплатное приложение из App Store.</p>
+        <a class="btn btn-block" style="margin-top:10px" href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener" data-k="s1b">Открыть в App Store</a>
       </div>
     </div>
 
     <div class="card step">
       <div class="num">2</div>
       <div>
-        <h3>Скопируй скрипт</h3>
-        <p>В нём уже твой выбор и напоминание за 5 минут до пары.</p>
-        <button id="copyBtn" class="btn btn-primary btn-block" style="margin-top:10px" disabled>Скопировать скрипт</button>
+        <h3 data-k="s2">Скопируй скрипт</h3>
+        <p data-k="s2p">В нём уже твой выбор и напоминание за 5 минут до пары.</p>
+        <button id="copyBtn" class="btn btn-primary btn-block" style="margin-top:10px" disabled data-k="s2b">Скопировать скрипт</button>
       </div>
     </div>
 
     <div class="card step">
       <div class="num">3</div>
       <div>
-        <h3>Вставь в Scriptable</h3>
-        <p>Открой Scriptable → <b>+</b> (справа сверху) → вставь скрипт → нажми на название сверху и назови <b>«Расписание»</b> → <b>Готово</b>. Нажми ▶︎, чтобы проверить.</p>
+        <h3 data-k="s3">Вставь в Scriptable</h3>
+        <p data-kh="s3p"></p>
       </div>
     </div>
 
     <div class="card step">
       <div class="num">4</div>
       <div>
-        <h3>Добавь виджет</h3>
-        <p>Долгое нажатие на пустом месте экрана → <b>Править</b> → <b>Добавить виджет</b> → <b>Scriptable</b> → выбери размер (лучше средний или большой) → <b>Добавить</b>. Затем нажми на виджет → <b>Script</b> → «Расписание».</p>
-        <p style="margin-top:8px">Для экрана блокировки: зажми экран блокировки → <b>Настроить</b> → виджеты → Scriptable → тот же скрипт.</p>
+        <h3 data-k="s4">Добавь виджет</h3>
+        <p data-kh="s4p"></p>
+        <p style="margin-top:8px" data-kh="s4l"></p>
       </div>
     </div>
 
-    <p class="note">Виджет сам обновляется в начале и конце каждой пары (iOS может немного задерживать обновления). Без интернета показывает последнюю сохранённую копию. Нажатие на виджет открывает сайт.</p>
+    <p class="note" data-k="foot">Виджет сам обновляется в начале и конце каждой пары (iOS может немного задерживать обновления). Без интернета показывает последнюю сохранённую копию. Нажатие на виджет открывает сайт.</p>
   </div>
 
   <div id="toast" class="toast" role="status"></div>
 
+  <script src="i18n.js"></script>
   <script>
     (function () {
+      var T = {
+        ru: {
+          title: "Виджет для iPhone", back: "‹ К расписанию", h1: "Виджет для iPhone",
+          lead: "Пары на сегодня прямо на домашнем экране и экране блокировки. Нужно бесплатное приложение Scriptable.",
+          yours: "Твоё расписание", change: "Сменить",
+          noSel: "Сначала выбери группу, преподавателя или аудиторию в приложении — выбор подставится в виджет.", choose: "Выбрать группу",
+          s1: "Установи Scriptable", s1p: "Бесплатное приложение из App Store.", s1b: "Открыть в App Store",
+          s2: "Скопируй скрипт", s2p: "В нём уже твой выбор, язык и напоминание за 5 минут до пары.", s2b: "Скопировать скрипт",
+          s3: "Вставь в Scriptable",
+          s3p: "Открой Scriptable → <b>+</b> (справа сверху) → вставь скрипт → нажми на название сверху и назови <b>«Расписание»</b> → <b>Готово</b>. Нажми ▶︎, чтобы проверить.",
+          s4: "Добавь виджет",
+          s4p: "Долгое нажатие на пустом месте экрана → <b>Править</b> → <b>Добавить виджет</b> → <b>Scriptable</b> → выбери размер (лучше средний или большой) → <b>Добавить</b>. Затем нажми на виджет → <b>Script</b> → «Расписание».",
+          s4l: "Для экрана блокировки: зажми экран блокировки → <b>Настроить</b> → виджеты → Scriptable → тот же скрипт.",
+          foot: "Виджет сам обновляется в начале и конце каждой пары (iOS может немного задерживать обновления). Без интернета показывает последнюю сохранённую копию. Нажатие на виджет открывает сайт.",
+          room: "Аудитория ", copied: "Скрипт скопирован ✓ Теперь вставь его в Scriptable", noCopy: "Не получилось скопировать",
+          noLoad: "Не удалось загрузить скрипт — проверь интернет",
+        },
+        ky: {
+          title: "iPhone үчүн виджет", back: "‹ Жадыбалга", h1: "iPhone үчүн виджет",
+          lead: "Бүгүнкү сабактар түз эле башкы экранда жана кулпу экранында. Акысыз Scriptable тиркемеси керек.",
+          yours: "Сиздин жадыбал", change: "Өзгөртүү",
+          noSel: "Адегенде тиркемеде топту, окутуучуну же аудиторияны тандаңыз — тандоо виджетке өзү коюлат.", choose: "Топту тандоо",
+          s1: "Scriptable орнотуңуз", s1p: "App Store'догу акысыз тиркеме.", s1b: "App Store'до ачуу",
+          s2: "Скриптти көчүрүңүз", s2p: "Анда сиздин тандооңуз, тил жана пара алдында 5 мүнөт мурун эскертүү бар.", s2b: "Скриптти көчүрүү",
+          s3: "Scriptable'га коюңуз",
+          s3p: "Scriptable ачыңыз → <b>+</b> (жогору оңдо) → скриптти коюңуз → жогорудагы аталышты басып, <b>«Расписание»</b> деп атаңыз → <b>Даяр</b>. Текшерүү үчүн ▶︎ басыңыз.",
+          s4: "Виджет кошуңуз",
+          s4p: "Экрандын бош жерин узак басыңыз → <b>Түзөтүү</b> → <b>Виджет кошуу</b> → <b>Scriptable</b> → өлчөмүн тандаңыз (орточо же чоң жакшы) → <b>Кошуу</b>. Андан соң виджетти басыңыз → <b>Script</b> → «Расписание».",
+          s4l: "Кулпу экраны үчүн: кулпу экранын басып туруңуз → <b>Ыңгайлаштыруу</b> → виджеттер → Scriptable → ошол эле скрипт.",
+          foot: "Виджет ар бир паранын башында жана аягында өзү жаңыланат (iOS жаңылоону бир аз кечиктириши мүмкүн). Интернет жок болсо, акыркы сакталган көчүрмөнү көрсөтөт. Виджетти басканда сайт ачылат.",
+          room: "Аудитория ", copied: "Скрипт көчүрүлдү ✓ Эми аны Scriptable'га коюңуз", noCopy: "Көчүрүү мүмкүн болбоду",
+          noLoad: "Скриптти жүктөө мүмкүн болбоду — интернетти текшериңиз",
+        },
+        en: {
+          title: "iPhone widget", back: "‹ Back to schedule", h1: "iPhone widget",
+          lead: "Today's classes right on your home screen and lock screen. Requires the free Scriptable app.",
+          yours: "Your schedule", change: "Change",
+          noSel: "First choose a group, teacher or room in the app — your choice will be put into the widget.", choose: "Choose group",
+          s1: "Install Scriptable", s1p: "A free app from the App Store.", s1b: "Open in App Store",
+          s2: "Copy the script", s2p: "It already contains your choice, language and a reminder 5 minutes before class.", s2b: "Copy script",
+          s3: "Paste into Scriptable",
+          s3p: "Open Scriptable → <b>+</b> (top right) → paste the script → tap the title at the top and name it <b>“Расписание”</b> → <b>Done</b>. Tap ▶︎ to test.",
+          s4: "Add the widget",
+          s4p: "Long-press an empty spot on the screen → <b>Edit</b> → <b>Add Widget</b> → <b>Scriptable</b> → choose a size (medium or large is best) → <b>Add Widget</b>. Then tap the widget → <b>Script</b> → “Расписание”.",
+          s4l: "For the lock screen: press and hold the lock screen → <b>Customize</b> → widgets → Scriptable → the same script.",
+          foot: "The widget refreshes itself at the start and end of every class (iOS may delay updates a little). Offline it shows the last saved copy. Tapping the widget opens the site.",
+          room: "Room ", copied: "Script copied ✓ Now paste it into Scriptable", noCopy: "Couldn't copy",
+          noLoad: "Couldn't load the script — check your internet",
+        },
+      };
+      var lang = (window.I18N && window.I18N.lang) || "ru";
+      var L = T[lang] || T.ru;
+      document.documentElement.lang = lang;
+      document.title = L.title;
+      Array.prototype.forEach.call(document.querySelectorAll("[data-k]"), function (el) { if (L[el.dataset.k]) el.textContent = L[el.dataset.k]; });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-kh]"), function (el) { if (L[el.dataset.kh]) el.innerHTML = L[el.dataset.kh]; });
+
       var settings = {};
       try { settings = JSON.parse(localStorage.getItem("oshtu.settings") || "{}") || {}; } catch (e) {}
       var toast = function (msg) {
@@ -100,7 +158,7 @@
         document.getElementById("noGroup").hidden = false;
         return;
       }
-      document.getElementById("gName").textContent = (settings.mode === "room" ? "Аудитория " : "") + (settings.targetName || settings.targetId);
+      document.getElementById("gName").textContent = (settings.mode === "room" ? L.room : "") + (settings.targetName || settings.targetId);
       var script = null;
       fetch("iphone-widget.js", { cache: "no-store" }).then(function (r) { return r.text(); }).then(function (tpl) {
         var name = JSON.stringify(String(settings.targetName || "")).slice(1, -1);
@@ -112,13 +170,14 @@
           .replace("__SEMESTER__", sem)
           .replace("__NOTIFY__", String(Number(settings.notify == null ? 5 : settings.notify) || 0))
           .replace("__STYLE__", settings.notifyStyle === "simple" ? "simple" : "melody")
+          .replace("__LANG__", lang)
           .replace("__FLIP__", settings.weekFlip ? "true" : "false");
         document.getElementById("copyBtn").disabled = false;
-      }).catch(function () { toast("Не удалось загрузить скрипт — проверь интернет"); });
+      }).catch(function () { toast(L.noLoad); });
 
       document.getElementById("copyBtn").onclick = function () {
         if (!script) return;
-        var done = function () { toast("Скрипт скопирован ✓ Теперь вставь его в Scriptable"); };
+        var done = function () { toast(L.copied); };
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(script).then(done, fallback);
         } else fallback();
@@ -126,7 +185,7 @@
           var ta = document.createElement("textarea");
           ta.value = script; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
           document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, script.length);
-          try { document.execCommand("copy"); done(); } catch (e) { toast("Не получилось скопировать"); }
+          try { document.execCommand("copy"); done(); } catch (e) { toast(L.noCopy); }
           document.body.removeChild(ta);
         }
       };

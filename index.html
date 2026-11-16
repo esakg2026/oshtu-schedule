@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Расписание ОшТУ</title>
   <meta name="author" content="ESA — Эркебаев Самат Адылович" />
-  <meta name="description" content="Расписание занятий ОшТУ: сегодня, завтра, неделя. Работает офлайн." />
+  <meta name="description" content="Расписание занятий ОшТУ: сегодня, завтра, неделя. Работает офлайн. Русский, кыргызча, English." />
   <meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0d0f17" media="(prefers-color-scheme: dark)" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -28,86 +28,83 @@
   <!-- ===== Первый запуск: выбор группы ===== -->
   <section id="setup" class="setup" hidden>
     <div class="setup-card">
+      <div class="seg seg-sm lang-seg" id="setupLang" role="group" aria-label="Язык / Тил / Language">
+        <button data-v="ru">Русский</button>
+        <button data-v="ky">Кыргызча</button>
+        <button data-v="en">English</button>
+      </div>
       <img src="icon.svg" alt="" class="setup-logo" width="64" height="64" />
-      <h1>Расписание ОшТУ</h1>
-      <p class="muted">Для студентов, преподавателей и всех, кому нужно расписание аудиторий. Выбери один раз — дальше приложение само покажет пары на сегодня.</p>
+      <h1 data-i18n="app.title">Расписание ОшТУ</h1>
+      <p class="muted" data-i18n="setup.lead">Для студентов, преподавателей и всех, кому нужно расписание аудиторий. Выбери один раз — дальше приложение само покажет пары на сегодня.</p>
 
       <div class="seg mode-seg" id="modeSeg">
-        <button data-mode="group" class="active">Студент</button>
-        <button data-mode="teacher">Преподаватель</button>
-        <button data-mode="room">Аудитория</button>
+        <button data-mode="group" class="active" data-i18n="mode.group">Студент</button>
+        <button data-mode="teacher" data-i18n="mode.teacher">Преподаватель</button>
+        <button data-mode="room" data-i18n="mode.room">Аудитория</button>
       </div>
 
       <label class="field">
-        <span>Семестр</span>
+        <span data-i18n="f.semester">Семестр</span>
         <select id="fSemester"></select>
       </label>
 
       <div id="paneGroup">
         <label class="field">
-          <span>Факультет / Институт</span>
-          <select id="fFaculty"><option value="">Загрузка…</option></select>
+          <span data-i18n="f.faculty">Факультет / Институт</span>
+          <select id="fFaculty"><option value="" data-i18n="loading">Загрузка…</option></select>
         </label>
         <label class="field">
-          <span>Курс</span>
-          <select id="fCourse">
-            <option value="">Выбери курс</option>
-            <option value="1">1 курс</option>
-            <option value="2">2 курс</option>
-            <option value="3">3 курс</option>
-            <option value="4">4 курс</option>
-            <option value="5">5 курс</option>
-            <option value="6">6 курс</option>
-          </select>
+          <span data-i18n="f.course">Курс</span>
+          <select id="fCourse"></select>
         </label>
         <label class="field">
-          <span>Группа</span>
-          <select id="fGroup" disabled><option value="">Сначала факультет и курс</option></select>
+          <span data-i18n="f.group">Группа</span>
+          <select id="fGroup" disabled><option value="" data-i18n="f.facCourseFirst">Сначала факультет и курс</option></select>
         </label>
       </div>
 
       <div id="paneTeacher" hidden>
         <label class="field">
-          <span>Подразделение / Институт</span>
-          <select id="fDept"><option value="">Загрузка…</option></select>
+          <span data-i18n="f.dept">Подразделение / Институт</span>
+          <select id="fDept"><option value="" data-i18n="loading">Загрузка…</option></select>
         </label>
         <label class="field">
-          <span>Преподаватель</span>
-          <input id="fTeacherSearch" class="search" type="search" placeholder="Поиск по фамилии…" autocomplete="off" disabled />
-          <select id="fTeacher" disabled><option value="">Сначала подразделение</option></select>
+          <span data-i18n="f.teacher">Преподаватель</span>
+          <input id="fTeacherSearch" class="search" type="search" data-i18n-ph="f.search" placeholder="Поиск по фамилии…" autocomplete="off" disabled />
+          <select id="fTeacher" disabled><option value="" data-i18n="f.deptFirst">Сначала подразделение</option></select>
         </label>
       </div>
 
       <div id="paneRoom" hidden>
         <label class="field">
-          <span>Корпус</span>
-          <select id="fBuilding"><option value="">Загрузка…</option></select>
+          <span data-i18n="f.building">Корпус</span>
+          <select id="fBuilding"><option value="" data-i18n="loading">Загрузка…</option></select>
         </label>
         <label class="field">
-          <span>Аудитория</span>
-          <select id="fRoom" disabled><option value="">Сначала корпус</option></select>
+          <span data-i18n="f.room">Аудитория</span>
+          <select id="fRoom" disabled><option value="" data-i18n="f.buildingFirst">Сначала корпус</option></select>
         </label>
       </div>
 
       <p id="setupError" class="error" hidden></p>
-      <button id="setupSave" class="btn btn-primary btn-block" disabled>Готово</button>
-      <button id="setupCancel" class="btn btn-ghost btn-block" hidden>Отмена</button>
+      <button id="setupSave" class="btn btn-primary btn-block" disabled data-i18n="done">Готово</button>
+      <button id="setupCancel" class="btn btn-ghost btn-block" hidden data-i18n="cancel">Отмена</button>
     </div>
   </section>
 
   <!-- ===== Основной экран ===== -->
   <section id="main" class="main" hidden>
     <header class="topbar">
-      <button id="groupBtn" class="chip" aria-label="Сменить группу">
+      <button id="groupBtn" class="chip" data-i18n-aria="aria.change" aria-label="Сменить группу">
         <span id="groupName">—</span>
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div class="topbar-right">
-        <button id="syncBtn" class="sync" aria-label="Обновить">
+        <button id="syncBtn" class="sync" data-i18n-aria="aria.refresh" aria-label="Обновить">
           <span id="syncDot" class="dot"></span>
           <span id="syncText">…</span>
         </button>
-        <button id="settingsBtn" class="icon-btn" aria-label="Настройки">
+        <button id="settingsBtn" class="icon-btn" data-i18n-aria="aria.settings" aria-label="Настройки">
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
         </button>
       </div>
@@ -115,20 +112,20 @@
 
     <div id="installBanner" class="install-banner" hidden>
       <div>
-        <strong>Установи приложение</strong>
-        <span>Иконка на экране и работа без интернета</span>
+        <strong data-i18n="install.title">Установи приложение</strong>
+        <span data-i18n="install.sub">Иконка на экране и работа без интернета</span>
       </div>
-      <button id="installBtn" class="btn btn-primary btn-sm">Установить</button>
-      <button id="installClose" class="icon-btn" aria-label="Скрыть">✕</button>
+      <button id="installBtn" class="btn btn-primary btn-sm" data-i18n="install.btn">Установить</button>
+      <button id="installClose" class="icon-btn" data-i18n-aria="aria.hide" aria-label="Скрыть">✕</button>
     </div>
 
     <div id="apkBanner" class="install-banner" hidden>
       <div>
-        <strong>Виджет на рабочий стол</strong>
+        <strong data-i18n="apk.title">Виджет на рабочий стол</strong>
         <span id="apkBannerText">Скачай Android-приложение с виджетом</span>
       </div>
       <a id="apkBannerBtn" href="oshtu-schedule.apk" download class="btn btn-primary btn-sm" style="text-decoration:none">Скачать</a>
-      <button id="apkClose" class="icon-btn" aria-label="Скрыть">✕</button>
+      <button id="apkClose" class="icon-btn" data-i18n-aria="aria.hide" aria-label="Скрыть">✕</button>
     </div>
 
     <div class="hero">
@@ -148,17 +145,17 @@
     </div>
 
     <div class="sections" id="sectionSeg" role="tablist">
-      <button role="tab" data-sec="classes" class="active">Занятия</button>
-      <button role="tab" data-sec="exams">Зачёты и экзамены</button>
-      <button role="tab" data-sec="laz">ЛАЗ</button>
+      <button role="tab" data-sec="classes" class="active" data-i18n="sec.classes">Занятия</button>
+      <button role="tab" data-sec="exams" data-i18n="sec.exams">Зачёты и экзамены</button>
+      <button role="tab" data-sec="laz" data-i18n="sec.laz">ЛАЗ</button>
     </div>
 
     <div id="classesBox">
-      <nav id="weekStrip" class="week-strip" aria-label="Дни недели"></nav>
+      <nav id="weekStrip" class="week-strip" data-i18n-aria="aria.days" aria-label="Дни недели"></nav>
 
       <div class="seg" id="viewSeg" role="tablist">
-        <button role="tab" data-view="day" class="active">День</button>
-        <button role="tab" data-view="week">Неделя</button>
+        <button role="tab" data-view="day" class="active" data-i18n="view.day">День</button>
+        <button role="tab" data-view="week" data-i18n="view.week">Неделя</button>
       </div>
 
       <main id="content" class="content" aria-live="polite"></main>
@@ -171,11 +168,11 @@
     <footer id="syncInfo" class="sync-info"></footer>
 
     <div class="bottom-bar" id="bottomBar">
-      <button id="prevBtn" class="nav-btn" aria-label="Назад">
+      <button id="prevBtn" class="nav-btn" data-i18n-aria="aria.back" aria-label="Назад">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <button id="todayBtn" class="today-btn">Сегодня</button>
-      <button id="nextBtn" class="nav-btn" aria-label="Вперёд">
+      <button id="nextBtn" class="nav-btn" data-i18n-aria="aria.forward" aria-label="Вперёд">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
@@ -185,8 +182,8 @@
   <dialog id="settings" class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-head">
-      <h2>Настройки</h2>
-      <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+      <h2 data-i18n="settings">Настройки</h2>
+      <button class="icon-btn" data-close data-i18n-aria="aria.close" aria-label="Закрыть">✕</button>
     </div>
 
     <div class="set-group">
@@ -195,107 +192,109 @@
           <div class="set-title" id="sGroup">—</div>
           <div class="set-sub" id="sFaculty">—</div>
         </div>
-        <button id="sChange" class="btn btn-sm">Сменить</button>
+        <button id="sChange" class="btn btn-sm" data-i18n="change">Сменить</button>
       </div>
     </div>
 
     <div class="set-group">
-      <div class="set-label">🔔 Напоминание перед парой</div>
+      <div class="set-label">🌐 <span data-i18n="s.lang">Язык</span></div>
+      <div class="seg seg-sm" id="sLang">
+        <button data-v="ru">Русский</button>
+        <button data-v="ky">Кыргызча</button>
+        <button data-v="en">English</button>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-label" data-i18n="s.notify">🔔 Напоминание перед парой</div>
       <div class="seg seg-sm" id="sNotify">
-        <button data-v="0">Выкл</button>
+        <button data-v="0" data-i18n="off">Выкл</button>
         <button data-v="5">5 мин</button>
         <button data-v="10">10 мин</button>
         <button data-v="15">15 мин</button>
       </div>
-      <div class="set-label" style="margin-top:14px">Как напоминать</div>
+      <div class="set-label" style="margin-top:14px" data-i18n="s.how">Как напоминать</div>
       <div class="seg seg-sm" id="sNotifyStyle">
-        <button data-v="simple">Простой</button>
-        <button data-v="melody">Обычный</button>
-        <button data-v="voice">Голосовой</button>
+        <button data-v="simple" data-i18n="style.simple">Простой</button>
+        <button data-v="melody" data-i18n="style.melody">Обычный</button>
+        <button data-v="voice" data-i18n="style.voice">Голосовой</button>
       </div>
       <div class="set-hint" id="styleHint"></div>
-      <button id="sTestSound" class="btn btn-block">▶︎ Проверить напоминание</button>
+      <button id="sTestSound" class="btn btn-block" data-i18n="s.test">▶︎ Проверить напоминание</button>
       <div class="set-hint" id="notifyHint"></div>
     </div>
 
     <div class="set-group">
-      <div class="set-label">Какая неделя сейчас</div>
+      <div class="set-label" data-i18n="s.week">Какая неделя сейчас</div>
       <div class="seg seg-sm" id="sWeek">
-        <button data-v="top">Верхняя</button>
-        <button data-v="bottom">Нижняя</button>
+        <button data-v="top" data-i18n="week.top">Верхняя</button>
+        <button data-v="bottom" data-i18n="week.bottom">Нижняя</button>
       </div>
-      <div class="set-hint">На сайте ОшТУ ячейка делится линией: сверху — верхняя неделя, снизу — нижняя. Недели чередуются автоматически.</div>
+      <div class="set-hint" data-i18n="s.weekHint">На сайте ОшТУ ячейка делится линией: сверху — верхняя неделя, снизу — нижняя. Недели чередуются автоматически.</div>
     </div>
 
     <div class="set-group">
-      <div class="set-label">Семестр</div>
+      <div class="set-label" data-i18n="s.semester">Семестр</div>
       <div class="seg seg-sm" id="sSemester">
-        <button data-v="auto">Авто</button>
-        <button data-v="2">Осенний</button>
-        <button data-v="1">Весенний</button>
+        <button data-v="auto" data-i18n="auto">Авто</button>
+        <button data-v="2" data-i18n="sem.autumn">Осенний</button>
+        <button data-v="1" data-i18n="sem.spring">Весенний</button>
       </div>
     </div>
 
     <div class="set-group">
-      <div class="set-label">Тема</div>
+      <div class="set-label" data-i18n="s.theme">Тема</div>
       <div class="seg seg-sm" id="sTheme">
-        <button data-v="auto">Авто</button>
-        <button data-v="light">Светлая</button>
-        <button data-v="dark">Тёмная</button>
+        <button data-v="auto" data-i18n="auto">Авто</button>
+        <button data-v="light" data-i18n="theme.light">Светлая</button>
+        <button data-v="dark" data-i18n="theme.dark">Тёмная</button>
       </div>
     </div>
 
     <div class="set-group">
-      <div class="set-label">Виджет на главный экран</div>
+      <div class="set-label" data-i18n="s.widget">Виджет на главный экран</div>
       <div id="apkBlock">
-        <div class="set-hint" style="margin-top:0">
-          <b>Android:</b> скачай приложение — в нём есть настоящий виджет «Пары сегодня» с кнопками ‹ ›.
-          После установки открой приложение, выбери группу (или преподавателя, аудиторию), затем: долгое нажатие на пустом месте экрана → <b>Виджеты</b> → «Расписание ОшТУ».
-        </div>
-        <a class="btn btn-primary btn-block" href="oshtu-schedule.apk" download style="display:block;text-align:center;text-decoration:none">Скачать приложение для Android (APK)</a>
-        <div class="set-hint">Телефон спросит разрешение на установку из браузера — разреши для Chrome.</div>
+        <div class="set-hint" style="margin-top:0" data-i18n-html="s.apkHint"></div>
+        <a class="btn btn-primary btn-block" href="oshtu-schedule.apk" download style="display:block;text-align:center;text-decoration:none" data-i18n="s.apkBtn">Скачать приложение для Android (APK)</a>
+        <div class="set-hint" data-i18n="s.apkNote">Телефон спросит разрешение на установку из браузера — разреши для Chrome.</div>
       </div>
       <div id="iosBlock" hidden>
-        <div class="set-hint" style="margin-top:0">
-          <b>iPhone:</b> виджет на домашний экран и экран блокировки через бесплатное приложение Scriptable — настройка за 1 минуту.
-        </div>
-        <a class="btn btn-primary btn-block" href="iphone.html" style="display:block;text-align:center;text-decoration:none">Настроить виджет для iPhone</a>
+        <div class="set-hint" style="margin-top:0" data-i18n-html="s.iosText"></div>
+        <a class="btn btn-primary btn-block" href="iphone.html" style="display:block;text-align:center;text-decoration:none" data-i18n="s.iosBtn">Настроить виджет для iPhone</a>
       </div>
-      <div class="set-hint" id="appWidgetHint" hidden style="margin-top:0">
-        Долгое нажатие на пустом месте рабочего стола → <b>Виджеты</b> → найди «Расписание ОшТУ» → перетащи на экран.
-        В виджете: ‹ › — другой день, нажатие на заголовок — вернуться к сегодня, на строку «обновлено» — обновить.
-      </div>
+      <div class="set-hint" id="appWidgetHint" hidden style="margin-top:0"></div>
       <details style="margin-top:10px">
-        <summary class="set-hint" style="cursor:pointer">Веб-виджет (для iPhone и других приложений)</summary>
+        <summary class="set-hint" style="cursor:pointer" data-i18n="s.webWidget">Веб-виджет (для iPhone и других приложений)</summary>
         <div class="copy-row">
           <input id="widgetUrl" readonly />
-          <button id="widgetCopy" class="btn btn-sm">Копировать</button>
+          <button id="widgetCopy" class="btn btn-sm" data-i18n="copy">Копировать</button>
         </div>
-        <a id="widgetOpen" class="link" href="widget.html" target="_blank" rel="noopener">Открыть веб-виджет →</a>
+        <a id="widgetOpen" class="link" href="widget.html" target="_blank" rel="noopener" data-i18n="s.openWidget">Открыть веб-виджет →</a>
       </details>
     </div>
 
     <div class="set-group">
-      <button id="sInstall" class="btn btn-primary btn-block" hidden>Установить приложение</button>
-      <div class="set-hint" id="iosHint" hidden><b>iPhone:</b> Safari → «Поделиться» → «На экран Домой».</div>
-      <button id="sRefresh" class="btn btn-block">Обновить расписание сейчас</button>
+      <button id="sInstall" class="btn btn-primary btn-block" hidden data-i18n="s.installApp">Установить приложение</button>
+      <div class="set-hint" id="iosHint" hidden data-i18n-html="s.iosHint"></div>
+      <button id="sRefresh" class="btn btn-block" data-i18n="s.refreshNow">Обновить расписание сейчас</button>
     </div>
 
     <div class="set-group about">
-      <div class="set-label">О приложении</div>
-      <div class="set-title" style="font-size:15px">Расписание ОшТУ</div>
-      <div class="set-sub">Разработчик: компания <b>ESA</b></div>
-      <div class="set-sub">Владелец: Эркебаев Самат Адылович</div>
-      <div class="set-hint">Неофициальное приложение. Расписание берётся с открытого раздела сайта portal.oshtu.kg и синхронизируется каждые 20 минут. Работает без интернета.</div>
-      <a class="link" href="privacy.html">Политика конфиденциальности →</a>
+      <div class="set-label" data-i18n="about">О приложении</div>
+      <div class="set-title" style="font-size:15px" data-i18n="app.title">Расписание ОшТУ</div>
+      <div class="set-sub" data-i18n-html="about.dev">Разработчик: компания <b>ESA</b></div>
+      <div class="set-sub" data-i18n="about.owner">Владелец: Эркебаев Самат Адылович</div>
+      <div class="set-hint" data-i18n="about.note">Неофициальное приложение. Расписание берётся с открытого раздела сайта portal.oshtu.kg и синхронизируется каждые 20 минут. Работает без интернета.</div>
+      <a class="link" id="privacyLink" href="privacy.html" data-i18n="about.privacy">Политика конфиденциальности →</a>
     </div>
 
-    <p class="set-foot">© 2026 ESA · Эркебаев Самат Адылович</p>
+    <p class="set-foot" data-i18n="foot">© 2026 ESA · Эркебаев Самат Адылович</p>
   </dialog>
 
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
+  <script src="i18n.js"></script>
   <script src="core.js"></script>
   <script src="app.js"></script>
 </body>
