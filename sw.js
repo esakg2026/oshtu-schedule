@@ -55,7 +55,9 @@ self.addEventListener("fetch", (e) => {
   if (url.pathname.endsWith(".apk") || url.pathname.startsWith("/sb/")) return;
 
   const isNav = req.mode === "navigate";
-  const cacheKey = isNav ? (url.pathname.endsWith("widget.html") ? "widget.html" : "index.html") : req;
+  const page = url.pathname.split("/").pop();
+  const navKey = ["widget.html", "v2.html", "iphone.html", "privacy.html"].includes(page) ? page : "index.html";
+  const cacheKey = isNav ? navKey : req;
 
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {
