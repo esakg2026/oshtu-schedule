@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Расписание ОшТУ · v2</title>
+  <meta name="author" content="ESA — Эркебаев Самат Адылович" />
+  <meta name="theme-color" content="#f3f4f8" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b0d14" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="stylesheet" href="v2.css" />
+  <script>
+    try {
+      var t = JSON.parse(localStorage.getItem("oshtu.settings") || "{}").theme;
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="who">
+        <small id="whoKind">—</small>
+        <b id="whoName">—</b>
+      </div>
+      <div class="top-actions">
+        <button id="notesBtn" class="pill" aria-label="Мои записи">📝<span id="notesCount" class="cnt" hidden></span></button>
+        <button id="langBtn" class="pill" aria-label="Язык">RU</button>
+        <button id="syncBtn" class="pill" aria-label="Обновить"><i id="dot" class="dot"></i><span id="syncText">…</span></button>
+        <a id="classicLink" class="pill" href="./">⇄ <span id="classicText">Классика</span></a>
+      </div>
+    </header>
+
+    <section class="head">
+      <div class="head-row">
+        <span id="relDay" class="rel">—</span>
+        <span id="weekTag" class="week-tag">—</span>
+        <button id="todayBtn" class="today-btn" hidden>Сегодня ↩</button>
+      </div>
+      <h1 id="dayTitle">—</h1>
+      <p id="daySummary" class="summary"></p>
+    </section>
+
+    <nav id="days" class="days" aria-label="Дни"></nav>
+
+    <main id="timeline" class="timeline" aria-live="polite"></main>
+
+    <p id="foot" class="foot"></p>
+  </div>
+
+  <!-- Полная информация о паре -->
+  <dialog id="sheet" class="sheet">
+    <div class="grip"></div>
+    <div id="sheetBody"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="config.js"></script>
+  <script src="i18n.js"></script>
+  <script src="core.js"></script>
+  <script src="v2.js"></script>
+</body>
+</html>
