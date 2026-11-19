@@ -1,6 +1,6 @@
 // Service worker: приложение открывается мгновенно и работает без интернета.
 // При изменении файлов увеличь VERSION.
-const VERSION = "v7";
+const VERSION = "v8";
 const CACHE = `oshtu-shell-${VERSION}`;
 const SHELL = [
   "./",

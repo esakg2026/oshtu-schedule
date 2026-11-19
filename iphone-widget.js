@@ -8,27 +8,27 @@ const GROUP_NAME = "__GROUP_NAME__";
 const NOTIFY = __NOTIFY__;          // напоминание за N минут до пары (0 — выключено)
 const STYLE = "__STYLE__";          // "simple" — стандартный звук, иначе — мелодия Scriptable
 const SEMESTER = "__SEMESTER__";    // "auto", "1" (весенний) или "2" (осенний)
-const FLIP = __FLIP__;              // true — если верхняя/нижняя неделя показываются наоборот
+const FLIP = __FLIP__;              // true — если нечётная/чётная неделя показываются наоборот
 const LANG_RAW = "__LANG__";        // язык: "ru", "ky" или "en"
 const LANG = ["ru", "ky", "en"].includes(LANG_RAW) ? LANG_RAW : "ru";
 const TR = {
   ru: { today: "Сегодня", tomorrow: "Завтра", h: "ч", min: "мин", first: "Первая пара", next: "Дальше {n}-я", in: "через {d}",
         now: "Сейчас {n}-я · ещё {d}", none: "Пар нет", noneLow: "пар нет", pairs: "пар(ы)", dayOff: "Выходной", more: "ещё {n}…",
-        top: "верхняя", bottom: "нижняя", offline: "нет сети, копия", upd: "обновлено", room: "ауд.", rem: "Через {m} мин — {n}-я пара ({t})",
+        top: "нечётная", bottom: "чётная", offline: "нет сети, копия", upd: "обновлено", room: "ауд.", rem: "Через {m} мин — {n}-я пара ({t})",
         err: "Нет связи и нет сохранённого расписания. Открой виджет, когда появится интернет.",
         wd: ["", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"], wds: ["", "пн", "вт", "ср", "чт", "пт", "сб", "вс"],
         mons: ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
         type: { лк: "лк.", пр: "пр.", лб: "лаб.", ла: "лаб.", се: "сем." } },
   ky: { today: "Бүгүн", tomorrow: "Эртең", h: "саат", min: "мүн", first: "Биринчи пара", next: "Андан кийин {n}-пара", in: "{d} кийин",
         now: "Азыр {n}-пара · дагы {d}", none: "Сабак жок", noneLow: "сабак жок", pairs: "пара", dayOff: "Дем алыш", more: "дагы {n}…",
-        top: "үстүңкү", bottom: "астыңкы", offline: "тармак жок, көчүрмө", upd: "жаңыланды", room: "ауд.", rem: "{m} мүнөттөн кийин — {n}-пара ({t})",
+        top: "так", bottom: "жуп", offline: "тармак жок, көчүрмө", upd: "жаңыланды", room: "ауд.", rem: "{m} мүнөттөн кийин — {n}-пара ({t})",
         err: "Байланыш жок жана сакталган жадыбал жок. Интернет пайда болгондо виджетти ачыңыз.",
         wd: ["", "дүйшөмбү", "шейшемби", "шаршемби", "бейшемби", "жума", "ишемби", "жекшемби"], wds: ["", "дш", "шш", "шр", "бш", "жм", "иш", "жк"],
         mons: ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
         type: { лк: "лк.", пр: "пр.", лб: "лаб.", ла: "лаб.", се: "сем." } },
   en: { today: "Today", tomorrow: "Tomorrow", h: "h", min: "min", first: "First class", next: "Next: period {n}", in: "in {d}",
         now: "Period {n} now · {d} left", none: "No classes", noneLow: "no classes", pairs: "classes", dayOff: "Day off", more: "{n} more…",
-        top: "top", bottom: "bottom", offline: "offline copy", upd: "updated", room: "room", rem: "In {m} min — period {n} ({t})",
+        top: "odd", bottom: "even", offline: "offline copy", upd: "updated", room: "room", rem: "In {m} min — period {n} ({t})",
         err: "No connection and no saved schedule. Open the widget when you're online.",
         wd: ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], wds: ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         mons: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -43,7 +43,7 @@ const SITE = "https://oshtu-schedule.onrender.com";
 const API = [SITE + "/sb", "https://pzdraaxgzphxennadrlu.supabase.co"];
 const KEY = "sb_publishable_DjYWqTHsA02JavCvE3y5Eg_xVNezrf1";
 const TIMES = { 1: ["08:00", "09:20"], 2: ["09:30", "10:50"], 3: ["11:20", "12:40"], 4: ["12:50", "14:10"], 5: ["14:20", "15:40"], 6: ["15:50", "17:10"] };
-const WEEK_ANCHOR = new Date(2026, 10, 9); // неделя 9–14 ноября 2026 — «верхняя»
+const WEEK_ANCHOR = new Date(2026, 10, 9); // неделя 9–14 ноября 2026 — «нечётная» (на сайте — верхняя)
 const C = {
   bg1: new Color("#161927"), bg2: new Color("#1E2240"),
   text: new Color("#EEF0FA"), muted: new Color("#8D92AB"), accent: new Color("#9D9DFF"),
