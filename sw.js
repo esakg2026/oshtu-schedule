@@ -1,6 +1,6 @@
 // Service worker: приложение открывается мгновенно и работает без интернета.
 // При изменении файлов увеличь VERSION.
-const VERSION = "v8";
+const VERSION = "v9";
 const CACHE = `oshtu-shell-${VERSION}`;
 const SHELL = [
   "./",
@@ -56,7 +56,7 @@ self.addEventListener("fetch", (e) => {
 
   const isNav = req.mode === "navigate";
   const page = url.pathname.split("/").pop();
-  const navKey = ["widget.html", "v2.html", "iphone.html", "privacy.html"].includes(page) ? page : "index.html";
+  const navKey = ["widget.html", "v2.html", "iphone.html", "privacy.html", "pitch.html"].includes(page) ? page : "index.html";
   const cacheKey = isNav ? navKey : req;
 
   e.respondWith(
